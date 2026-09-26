@@ -31,9 +31,14 @@ export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
     })
     .setOrigin(0.5);
 
-  const nameBackground = scene.rexUI.add
-    .roundRectangle(0, 0, 320, 62, 18, TITLE_COLORS.cream)
-    .setStrokeStyle(5, TITLE_COLORS.ink);
+  // Keep the title screen compatible with the installed rexUI version.
+  // Some rexUI builds used by this project return a RoundRectangle shape
+  // without the fluent stroke/shadow helpers, so styling is applied only
+  // when those methods are actually available.
+  const nameBackground = scene.rexUI.add.roundRectangle(0, 0, 320, 62, 18, TITLE_COLORS.cream);
+  if (typeof (nameBackground as any).setStrokeStyle === 'function') {
+    (nameBackground as any).setStrokeStyle(5, TITLE_COLORS.ink);
+  }
 
   const userNameField = scene.rexUI.add.label({
     orientation: 'x',
@@ -57,10 +62,13 @@ export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
     space: { top: 5, bottom: 5, left: 5, right: 5 },
   });
 
-  const loginBackground = scene.rexUI.add
-    .roundRectangle(0, 0, 10, 10, 20, TITLE_COLORS.green)
-    .setStrokeStyle(6, TITLE_COLORS.ink)
-    .setShadow(0, 7, TITLE_COLORS.greenDark, 0.45, 2, 2);
+  const loginBackground = scene.rexUI.add.roundRectangle(0, 0, 10, 10, 20, TITLE_COLORS.green);
+  if (typeof (loginBackground as any).setStrokeStyle === 'function') {
+    (loginBackground as any).setStrokeStyle(6, TITLE_COLORS.ink);
+  }
+  if (typeof (loginBackground as any).setShadow === 'function') {
+    (loginBackground as any).setShadow(0, 7, TITLE_COLORS.greenDark, 0.45, 2, 2);
+  }
 
   const loginButton = scene.rexUI.add
     .label({
