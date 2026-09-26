@@ -3,6 +3,16 @@ import * as Constants from '../../../backend/src/constants/constants';
 import * as Config from '../config/config';
 const GetValue = Phaser.Utils.Objects.GetValue;
 
+const TITLE_COLORS = {
+  ink: 0x25324a,
+  cream: 0xfffbeb,
+  yellow: 0xffd83d,
+  green: 0x68d34b,
+  greenDark: 0x3d9d36,
+  blue: 0x57b9f5,
+  red: 0xff7070,
+};
+
 export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
   let username = GetValue(config, 'username', '');
   const title = GetValue(config, 'title', 'Welcome');
@@ -11,18 +21,28 @@ export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
   const widthValue = GetValue(config, 'width', undefined);
   const heightValue = GetValue(config, 'height', undefined);
 
-  // Title field object
-  const titleField = scene.add.text(0, 0, title, { fontFamily: 'PressStart2P' });
+  const titleField = scene.add
+    .text(0, 0, title, {
+      fontFamily: 'PressStart2P',
+      fontSize: '14px',
+      color: '#ffffff',
+      stroke: '#25324a',
+      strokeThickness: 4,
+    })
+    .setOrigin(0.5);
 
-  // User name field object
+  const nameBackground = scene.rexUI.add
+    .roundRectangle(0, 0, 320, 62, 18, TITLE_COLORS.cream)
+    .setStrokeStyle(5, TITLE_COLORS.ink);
+
   const userNameField = scene.rexUI.add.label({
     orientation: 'x',
-    background: scene.add.image(0, 0, 'nameBar'),
+    background: nameBackground,
     text: scene.rexUI.add.canvasInput(xValue, yValue, 300, 54, {
       style: {
         fontSize: 20,
         fontFamily: 'PressStart2P',
-        // Solution A
+        color: '#25324a',
         'cursor.color': 'black',
         'cursor.backgroundColor': 'white',
       },
@@ -34,21 +54,26 @@ export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
       },
       text: username,
     }),
-
     space: { top: 5, bottom: 5, left: 5, right: 5 },
   });
 
-  // Login button object
+  const loginBackground = scene.rexUI.add
+    .roundRectangle(0, 0, 10, 10, 20, TITLE_COLORS.green)
+    .setStrokeStyle(6, TITLE_COLORS.ink)
+    .setShadow(0, 7, TITLE_COLORS.greenDark, 0.45, 2, 2);
+
   const loginButton = scene.rexUI.add
     .label({
       orientation: 'x',
-      background: scene.rexUI.add.roundRectangle(0, 0, 10, 10, 10, Constants.LIGHT_RED),
-      text: scene.add.text(0, 0, 'Play', {
-        fontSize: '40px',
+      background: loginBackground,
+      text: scene.add.text(0, 0, 'PLAY', {
+        fontSize: '34px',
         fontFamily: 'PressStart2P',
-        color: 'white',
+        color: '#ffffff',
+        stroke: '#25324a',
+        strokeThickness: 3,
       }),
-      space: { top: 30, bottom: 30, left: 30, right: 30 },
+      space: { top: 24, bottom: 24, left: 36, right: 36 },
     })
     .setInteractive()
     .on('pointerdown', function () {
@@ -57,14 +82,13 @@ export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
     });
 
   loginButton.on('pointerover', function () {
-    loginButton.setScale(1.05);
+    loginButton.setScale(1.06);
   });
 
   loginButton.on('pointerout', function () {
     loginButton.setScale(1);
   });
 
-  // Dialog and its children
   const loginDialog = scene.rexUI.add
     .sizer({
       orientation: 'y',
@@ -74,7 +98,7 @@ export const createLoginDialog = function (scene: Phaser.Scene, config: any) {
       height: heightValue,
     })
     .add(titleField, 0, 'center', { top: 10, bottom: 10, left: 10, right: 10 }, false)
-    .add(userNameField, 0, 'center', { bottom: 40, left: 10, right: 10 }, true)
+    .add(userNameField, 0, 'center', { bottom: 34, left: 10, right: 10 }, true)
     .add(loginButton, 0, 'center', { bottom: 10, left: 10, right: 10 }, false)
     .layout();
 
