@@ -47,9 +47,16 @@ export default class Lobby extends Phaser.Scene {
     this.gridTable = undefined;
     this.dialog = undefined;
 
-    this.bgm = this.sound.add('opening', { volume: Config.SOUND_VOLUME });
-    this.se1 = this.sound.add('select', { volume: Config.SOUND_VOLUME });
-    this.se2 = this.sound.add('select1', { volume: Config.SOUND_VOLUME });
+    this.bgm = this.sound.add('opening', {
+      volume: Config.SOUND_VOLUME,
+    });
+
+    this.se1 = this.sound.add('select', {
+      volume: Config.SOUND_VOLUME,
+    });
+    this.se2 = this.sound.add('select1', {
+      volume: Config.SOUND_VOLUME,
+    });
   }
 
   create(data: { network: Network; playerName: string; bgm: Phaser.Sound.BaseSound | undefined }) {
@@ -69,6 +76,7 @@ export default class Lobby extends Phaser.Scene {
     this.playerName = data.playerName;
     this.add.volumeIcon(this, Constants.WIDTH - 100, 10, isPlay());
 
+    // BomBom Panic visual identity: keep the lobby consistent with the title screen.
     this.add.image(Constants.WIDTH / 2, 62, 'title').setScale(0.82);
     this.add
       .text(Constants.WIDTH / 2, 112, 'MULTIPLAYER LOBBY', {
@@ -77,16 +85,6 @@ export default class Lobby extends Phaser.Scene {
         color: '#25324a',
         stroke: '#ffffff',
         strokeThickness: 5,
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(Constants.WIDTH / 2, 142, 'CREATE A ROOM OR JOIN YOUR FRIENDS', {
-        fontFamily: 'PressStart2P',
-        fontSize: '8px',
-        color: '#ffffff',
-        stroke: '#25324a',
-        strokeThickness: 3,
       })
       .setOrigin(0.5);
 
@@ -111,7 +109,7 @@ export default class Lobby extends Phaser.Scene {
     });
 
     this.buttons = createButtons(this, Constants.WIDTH / 2, Constants.HEIGHT / 5 + 10, [
-      createButton(this, 'CREATE ROOM', 0x68d34b),
+      createButton(this, 'create room', 0xffd83d),
     ]);
     this.buttons.on('button.click', this.handleRoomCreate, this);
 
@@ -208,9 +206,13 @@ export default class Lobby extends Phaser.Scene {
       playerCard.setText(this.playerName);
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
-        if (idx === 2) child.setFillStyle(Constants.BLUE);
+        if (idx === 2) {
+          child.setFillStyle(Constants.BLUE);
+        }
       });
-      setTimeout(() => flipPlayerCard(this, playerCard, 'back'), 200);
+      setTimeout(() => {
+        flipPlayerCard(this, playerCard, 'back');
+      }, 200);
     }
   }
 
@@ -223,19 +225,30 @@ export default class Lobby extends Phaser.Scene {
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
         if (idx === 0) {
-          child.setFillStyle(player.gameState === Constants.PLAYER_GAME_STATE.READY ? Constants.GREEN : Constants.LIGHT_RED);
+          if (player.gameState === Constants.PLAYER_GAME_STATE.READY) {
+            child.setFillStyle(Constants.GREEN);
+          } else {
+            child.setFillStyle(Constants.LIGHT_RED);
+          }
         } else if (idx === 1) {
-          child.setText(player.gameState === Constants.PLAYER_GAME_STATE.READY ? 'ready' : 'not ready');
+          if (player.gameState === Constants.PLAYER_GAME_STATE.READY) {
+            child.setText('ready');
+          } else {
+            child.setText('not ready');
+          }
         } else if (idx === 2) {
           child.setFillStyle(Constants.RED);
         } else if (idx === 3) {
-          child.play(
-            player.gameState === Constants.PLAYER_GAME_STATE.READY ? `${player.character}_down` : `${player.character}_idle_down`,
-            true
-          );
+          if (player.gameState === Constants.PLAYER_GAME_STATE.READY) {
+            child.play(`${player.character}_down`, true);
+          } else {
+            child.play(`${player.character}_idle_down`, true);
+          }
         }
       });
-      setTimeout(() => flipPlayerCard(this, playerCard, 'back'), 200);
+      setTimeout(() => {
+        flipPlayerCard(this, playerCard, 'back');
+      }, 200);
     }
   }
 
@@ -262,9 +275,13 @@ export default class Lobby extends Phaser.Scene {
       const playerCard = dialogContent.getChildren().at(player.idx) as Label;
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
-        if (idx === 0) child.setFillStyle(Constants.GREEN);
-        else if (idx === 1) child.setText('ready');
-        else if (idx === 3) child.play(`${player.character}_down`, true);
+        if (idx === 0) {
+          child.setFillStyle(Constants.GREEN);
+        } else if (idx === 1) {
+          child.setText('ready');
+        } else if (idx === 3) {
+          child.play(`${player.character}_down`, true);
+        }
       });
     }
   }
