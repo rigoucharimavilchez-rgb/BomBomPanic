@@ -18,6 +18,8 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
   private readonly hit_se;
   nameLabel!: Phaser.GameObjects.Container;
   nameText!: Phaser.GameObjects.Text;
+  private nameBadge!: Phaser.GameObjects.Graphics;
+  private nameTriangle!: Phaser.GameObjects.Triangle;
   lastDirection: 'right' | 'left' | 'up' | 'down' = 'down';
   dmgAnimPlaying = false;
 
@@ -63,20 +65,32 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
   addNameLabel(triangleColor: number) {
     const game = getGameScene();
     const nameText = game.add
-      .text(0, 0, this.name, {
-        fontSize: '20px',
+      .text(0, -35, this.name, {
+        fontSize: '16px',
         fontFamily: 'PressStart2P',
         color: '#ffffff',
+        stroke: '#42618d',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
-    const label = game.add.rectangle(0, -35, nameText.width + 20, 30, Constants.BLACK, 0.3);
-    const triangle = game.add.triangle(0, 0, -5, -5, 15, -5, 5, 5, triangleColor);
+
+    // Friendly sticker-like name badge: bright, rounded and easy to read.
+    const badgeWidth = Math.max(76, nameText.width + 22);
+    const badge = game.add.graphics();
+    badge.fillStyle(0x42618d, 0.95);
+    badge.fillRoundedRect(-badgeWidth / 2, -50, badgeWidth, 30, 9);
+    badge.lineStyle(2, 0xffffff, 0.95);
+    badge.strokeRoundedRect(-badgeWidth / 2, -50, badgeWidth, 30, 9);
+
+    const triangle = game.add.triangle(0, -18, -5, -5, 15, -5, 5, 5, triangleColor);
+    triangle.setStrokeStyle(1, 0xffffff, 0.9);
+
     this.nameText = nameText;
-
-    Phaser.Display.Align.In.Center(nameText, label);
-    Phaser.Display.Align.To.BottomCenter(triangle, label, 5, 8);
-
-    this.nameLabel = game.add.container(this.x, this.y, [label, nameText, triangle]).setDepth(1000);
+    this.nameBadge = badge;
+    this.nameTriangle = triangle;
+    this.nameLabel = game.add
+      .container(this.x, this.y, [badge, nameText, triangle])
+      .setDepth(1000);
   }
 
   getHP(): number {
@@ -209,7 +223,7 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
     );
   }
 
-  // 爆弾の破壊力アイテムを取得した数
+  // 爆弾増加アイテムを取得した数
   getItemCountOfBombStrength(): number {
     return (
       (this.bombStrength - Constants.INITIAL_BOMB_STRENGTH) /
@@ -248,6 +262,13 @@ export default class Player extends Phaser.Physics.Matter.Sprite {
     if (this.name === userName) return;
     this.name = userName;
     this.nameText.setText(userName);
+
+    const badgeWidth = Math.max(76, this.nameText.width + 22);
+    this.nameBadge.clear();
+    this.nameBadge.fillStyle(0x42618d, 0.95);
+    this.nameBadge.fillRoundedRect(-badgeWidth / 2, -50, badgeWidth, 30, 9);
+    this.nameBadge.lineStyle(2, 0xffffff, 0.95);
+    this.nameBadge.strokeRoundedRect(-badgeWidth / 2, -50, badgeWidth, 30, 9);
   }
 }
 
