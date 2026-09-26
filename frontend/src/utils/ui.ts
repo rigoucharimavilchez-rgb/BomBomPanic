@@ -23,11 +23,21 @@ const CARTOON = {
   gray: 0x9aa8b8,
 };
 
-const roundedPanel = (scene: Phaser.Scene, color = CARTOON.cream, radius = 28) =>
-  scene.rexUI.add
-    .roundRectangle(0, 0, 10, 10, radius, color)
-    .setStrokeStyle(7, CARTOON.ink)
-    .setShadow(0, 8, CARTOON.ink, 0.22, 2, 2);
+const roundedPanel = (scene: Phaser.Scene, color = CARTOON.cream, radius = 28) => {
+  const panel: any = scene.rexUI.add.roundRectangle(0, 0, 10, 10, radius, color);
+
+  // rexUI versions differ in which chainable styling methods are exposed.
+  // Apply each optional style independently so the Lobby cannot crash if
+  // setShadow is unavailable in the installed version.
+  if (panel?.setStrokeStyle) {
+    panel.setStrokeStyle(7, CARTOON.ink);
+  }
+  if (panel?.setShadow) {
+    panel.setShadow(0, 8, CARTOON.ink, 0.22, 2, 2);
+  }
+
+  return panel;
+};
 
 const setButtonShadow = (button: any, color: number) => {
   const background = button.getElement?.('background');
@@ -192,13 +202,18 @@ export const createPlayerCard = (scene: Phaser.Scene, character: string) => {
   const cardColors = [CARTOON.blueSoft, 0xfff0c4, 0xe7dcff, 0xdff6d6];
   const cardColor = cardColors[Constants.CHARACTERS.indexOf(character) % cardColors.length];
 
+  const cardBackground: any = scene.rexUI.add.roundRectangle(0, 0, 2, 2, 28, cardColor);
+  if (cardBackground?.setStrokeStyle) {
+    cardBackground.setStrokeStyle(6, CARTOON.ink);
+  }
+  if (cardBackground?.setShadow) {
+    cardBackground.setShadow(0, 7, CARTOON.ink, 0.18, 2, 2);
+  }
+
   const card = scene.rexUI.add
     .label({
       orientation: 1,
-      background: scene.rexUI.add
-        .roundRectangle(0, 0, 2, 2, 28, cardColor)
-        .setStrokeStyle(6, CARTOON.ink)
-        .setShadow(0, 7, CARTOON.ink, 0.18, 2, 2),
+      background: cardBackground,
       icon: scene.rexUI.add.container(0, 0, 150, 150, [
         scene.rexUI.add
           .roundRectangle(0, 0, 150, 150, 26, CARTOON.white)
@@ -315,16 +330,22 @@ export const createGridTable = (scene: Phaser.Scene, availableRooms: IAvailableR
         const item = cell.item as IAvailableRoom;
 
         if (cellContainer === null) {
+          const cellBackground: any = scene.rexUI.add.roundRectangle(0, 0, 10, 10, 20, CARTOON.blueSoft);
+          if (cellBackground?.setStrokeStyle) {
+            cellBackground.setStrokeStyle(4, CARTOON.ink);
+          }
+
+          const cellIcon: any = scene.rexUI.add.roundRectangle(0, 0, 42, 42, 21, CARTOON.yellow);
+          if (cellIcon?.setStrokeStyle) {
+            cellIcon.setStrokeStyle(3, CARTOON.ink);
+          }
+
           cellContainer = scene.rexUI.add.label({
             width,
             height,
             orientation: 0,
-            background: scene.rexUI.add
-              .roundRectangle(0, 0, 10, 10, 20, CARTOON.blueSoft)
-              .setStrokeStyle(4, CARTOON.ink),
-            icon: scene.rexUI.add
-              .roundRectangle(0, 0, 42, 42, 21, CARTOON.yellow)
-              .setStrokeStyle(3, CARTOON.ink),
+            background: cellBackground,
+            icon: cellIcon,
             text: scene.add.text(0, 0, '', {
               fontSize: '12px',
               fontFamily: 'PressStart2P',
