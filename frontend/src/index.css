@@ -4,3 +4,31 @@
   font-weight: 400;
   font-weight: normal;
 }
+
+/* BomBom Panic — friendly casual-game page frame */
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 100%;
+  min-height: 100%;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background: #dff2ff;
+}
+
+#root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
