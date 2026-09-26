@@ -3,29 +3,79 @@ import Label from 'phaser3-rex-plugins/templates/ui/label/Label';
 import * as Constants from '../../../backend/src/constants/constants';
 import { IAvailableRoom } from '../scenes/Lobby';
 
+// BomBom Panic — Cartoon UI theme.
+// Visual-only layer: room/network/gameplay behavior remains unchanged.
+const CARTOON = {
+  ink: 0x25324a,
+  cream: 0xfffbeb,
+  white: 0xffffff,
+  yellow: 0xffd83d,
+  yellowShadow: 0xd39a20,
+  green: 0x68d34b,
+  greenShadow: 0x3d9d36,
+  blue: 0x57b9f5,
+  blueSoft: 0xdff5ff,
+  orange: 0xff914d,
+  red: 0xff7070,
+  pink: 0xffa4c7,
+  lavender: 0xc9b8ff,
+  graySoft: 0xeaf0f5,
+  gray: 0x9aa8b8,
+};
+
+const roundedPanel = (scene: Phaser.Scene, color = CARTOON.cream, radius = 28) =>
+  scene.rexUI.add
+    .roundRectangle(0, 0, 10, 10, radius, color)
+    .setStrokeStyle(6, CARTOON.ink);
+
+const setButtonShadow = (button: any, color: number) => {
+  const background = button.getElement?.('background');
+  if (background?.setStrokeStyle) {
+    background.setStrokeStyle(5, CARTOON.ink);
+  }
+  if (background?.setShadow) {
+    background.setShadow(0, 6, color, 0.35, 2, 2);
+  }
+};
+
 export const createButton = (scene: Phaser.Scene, text: string, color: number) => {
   const button = scene.rexUI.add.label({
     orientation: 'x',
-    background: scene.rexUI.add.roundRectangle(0, 0, 10, 10, 10, color),
-    text: scene.add.text(0, 0, text, {
+    background: scene.rexUI.add
+      .roundRectangle(0, 0, 10, 10, 18, color)
+      .setStrokeStyle(5, CARTOON.ink),
+    text: scene.add.text(0, 0, text.toUpperCase(), {
       fontFamily: 'PressStart2P',
-      color: 'white',
+      fontSize: '15px',
+      color: '#25324a',
+      stroke: '#ffffff',
+      strokeThickness: 1,
     }),
     align: 'center',
     space: {
-      top: 20,
-      bottom: 20,
-      left: 20,
-      right: 20,
+      top: 18,
+      bottom: 18,
+      left: 28,
+      right: 28,
     },
   });
 
+  setButtonShadow(button, CARTOON.yellowShadow);
+
   button.on('pointerover', function () {
-    button.setScale(1.05);
+    button.setScale(1.04);
   });
 
   button.on('pointerout', function () {
     button.setScale(1);
+  });
+
+  button.on('pointerdown', function () {
+    button.setScale(0.98);
+  });
+
+  button.on('pointerup', function () {
+    button.setScale(1.04);
   });
 
   return button;
@@ -37,7 +87,7 @@ export const createButtons = (
   y: number,
   buttons: Phaser.GameObjects.GameObject[]
 ) => {
-  return scene.rexUI.add.buttons({ x, y, orientation: 'y', buttons, space: { item: 10 } }).layout();
+  return scene.rexUI.add.buttons({ x, y, orientation: 'y', buttons, space: { item: 14 } }).layout();
 };
 
 export const createDialog = (
@@ -51,20 +101,26 @@ export const createDialog = (
     .dialog({
       x,
       y,
-      width: 900,
-      height: 700,
-      background: scene.add.image(0, 0, 'board'),
+      width: 920,
+      height: 710,
+      background: roundedPanel(scene, CARTOON.cream, 30),
       title: scene.rexUI.add.label({
-        background: scene.add.image(0, 0, 'child_board'),
-        text: scene.add.text(0, 0, 'waiting for players to become ready...', {
-          fontSize: '16px',
+        background: scene.rexUI.add
+          .roundRectangle(0, 0, 10, 10, 22, CARTOON.blue)
+          .setStrokeStyle(5, CARTOON.ink),
+        text: scene.add.text(0, 0, 'WAITING FOR PLAYERS!', {
+          fontSize: '17px',
           fontFamily: 'PressStart2P',
-          color: 'black',
+          color: '#ffffff',
+          stroke: '#25324a',
+          strokeThickness: 4,
         }),
         align: 'center',
         space: {
-          top: 30,
-          bottom: 30,
+          top: 24,
+          bottom: 24,
+          left: 24,
+          right: 24,
         },
       }),
       content: createDialogContent(scene),
@@ -72,17 +128,17 @@ export const createDialog = (
         content: false,
       },
       actions: [
-        createButton(scene, 'ready?', Constants.GREEN),
-        createButton(scene, 'exit', Constants.GRAY),
+        createButton(scene, 'READY!', CARTOON.yellow),
+        createButton(scene, 'EXIT', CARTOON.red),
       ],
       space: {
-        title: 10,
-        content: 10,
-        left: 10,
-        right: 10,
-        top: 10,
-        bottom: 10,
-        action: 30,
+        title: 16,
+        content: 16,
+        left: 18,
+        right: 18,
+        top: 18,
+        bottom: 18,
+        action: 26,
       },
     })
     .popUp(100)
@@ -92,8 +148,8 @@ export const createDialog = (
   dialog.on('button.click', function (button: Label, _: any, index: number) {
     switch (index) {
       case 0:
-        button.setText('waiting');
-        (button.getElement('background') as RoundRectangle).setFillStyle(Constants.GRAY);
+        button.setText('WAITING...');
+        (button.getElement('background') as RoundRectangle).setFillStyle(CARTOON.green);
         button.layout();
         onClick();
         break;
@@ -120,8 +176,8 @@ const createDialogContent = (scene: Phaser.Scene) => {
       space: {
         top: 10,
         bottom: 10,
-        column: 20,
-        row: 20,
+        column: 18,
+        row: 18,
       },
     })
     .layout();
@@ -134,30 +190,42 @@ const createDialogContent = (scene: Phaser.Scene) => {
 };
 
 export const createPlayerCard = (scene: Phaser.Scene, character: string) => {
+  const cardColors = [CARTOON.blueSoft, 0xfff0c4, 0xe7dcff, 0xdff6d6];
+  const cardColor = cardColors[Constants.CHARACTERS.indexOf(character) % cardColors.length];
+
   const card = scene.rexUI.add
     .label({
       orientation: 1,
       background: scene.rexUI.add
-        .roundRectangle(0, 0, 2, 2, 20, 0xdce0d2)
-        .setStrokeStyle(8, 0xdce0d2),
+        .roundRectangle(0, 0, 2, 2, 24, cardColor)
+        .setStrokeStyle(6, CARTOON.ink),
       icon: scene.rexUI.add.container(0, 0, 150, 150, [
-        scene.rexUI.add.roundRectangle(0, 0, 150, 150, 20, Constants.LIGHT_RED),
+        scene.rexUI.add
+          .roundRectangle(0, 0, 150, 150, 24, CARTOON.white)
+          .setStrokeStyle(4, CARTOON.ink),
         scene.add
-          .text(0, -60, 'not ready', {
-            fontSize: '12px',
-            color: 'white',
+          .text(0, -60, 'NOT READY', {
+            fontSize: '10px',
+            color: '#25324a',
             fontFamily: 'PressStart2P',
+            backgroundColor: '#ff7070',
+            padding: { left: 8, right: 8, top: 6, bottom: 6 },
           })
           .setOrigin(0.5),
-        scene.add.triangle(5, -35, -5, -5, 15, -5, 5, 5, Constants.BLUE).setOrigin(0.5),
+        scene.add.circle(52, 55, 9, CARTOON.yellow).setStrokeStyle(3, CARTOON.ink),
         scene.add.sprite(0, 10, character).setScale(1.6, 1.3).play(`${character}_idle_down`, true),
       ]),
       text: scene.add
-        .text(0, 0, '', { fontSize: '18px', fontFamily: 'PressStart2P' })
+        .text(0, 0, '', {
+          fontSize: '15px',
+          fontFamily: 'PressStart2P',
+          color: '#25324a',
+          align: 'center',
+        })
         .setOrigin(0.5),
       expandTextWidth: false,
       expandTextHeight: false,
-      space: { left: 20, right: 20, top: 20, bottom: 20, icon: 10 },
+      space: { left: 14, right: 14, top: 14, bottom: 14, icon: 10 },
     })
     .layout();
 
@@ -165,7 +233,7 @@ export const createPlayerCard = (scene: Phaser.Scene, character: string) => {
   const background = card.getElement('background');
   children.forEach((child: any) => {
     if (child === background) {
-      child.setFillStyle(0xc1c8b9);
+      child.setFillStyle(cardColor);
     } else {
       card.setChildVisible(child, false);
     }
@@ -188,7 +256,7 @@ export const flipPlayerCard = (
       for (let i = 0, cnt = children.length; i < cnt; i++) {
         const child = children[i];
         if (child === background) {
-          child.setFillStyle(Constants.DARK_GRAY);
+          child.setFillStyle(CARTOON.cream);
         } else {
           gameObject.setChildVisible(child, true);
         }
@@ -200,7 +268,7 @@ export const flipPlayerCard = (
       for (let i = 0, cnt = children.length; i < cnt; i++) {
         const child = children[i];
         if (child === background) {
-          child.setFillStyle(0xc1c8b9);
+          child.setFillStyle(CARTOON.graySoft);
         } else {
           gameObject.setChildVisible(child, false);
         }
@@ -219,7 +287,7 @@ export const createGridTable = (scene: Phaser.Scene, availableRooms: IAvailableR
       width: 400,
       height: 400,
       scrollMode: 0,
-      background: scene.add.image(0, 0, 'board'),
+      background: roundedPanel(scene, CARTOON.white, 26),
       table: {
         cellWidth: undefined,
         cellHeight: 80,
@@ -230,8 +298,8 @@ export const createGridTable = (scene: Phaser.Scene, availableRooms: IAvailableR
         reuseCellContainer: true,
       },
       slider: {
-        track: scene.rexUI.add.roundRectangle(0, 0, 20, 10, 10, 0x6b4b5b),
-        thumb: scene.add.image(0, 0, 'slider_thumb'),
+        track: scene.rexUI.add.roundRectangle(0, 0, 20, 10, 10, CARTOON.blue),
+        thumb: scene.rexUI.add.roundRectangle(0, 0, 24, 40, 12, CARTOON.yellow).setStrokeStyle(4, CARTOON.ink),
       },
       space: {
         left: 20,
@@ -253,16 +321,22 @@ export const createGridTable = (scene: Phaser.Scene, availableRooms: IAvailableR
             width,
             height,
             orientation: 0,
-            background: scene.add.image(0, 0, 'child_board'),
-            icon: scene.add.image(0, 0, 'cross').setScale(2),
+            background: scene.rexUI.add
+              .roundRectangle(0, 0, 10, 10, 18, CARTOON.blueSoft)
+              .setStrokeStyle(4, CARTOON.ink),
+            icon: scene.rexUI.add
+              .roundRectangle(0, 0, 42, 42, 21, CARTOON.yellow)
+              .setStrokeStyle(3, CARTOON.ink),
             text: scene.add.text(0, 0, '', {
               fontSize: '12px',
               fontFamily: 'PressStart2P',
-              color: '#000',
+              color: '#25324a',
+              align: 'center',
             }),
             space: {
-              icon: 20,
+              icon: 16,
               left: 15,
+              right: 12,
             },
           });
         }
@@ -272,9 +346,8 @@ export const createGridTable = (scene: Phaser.Scene, availableRooms: IAvailableR
         const text =
           item.id === 'default' ? item.name : `${item.name}\n\n${item.clients}/${item.maxClients}`;
         cellContainer.getElement('text').setText(text);
-        cellContainer
-          .getElement('icon')
-          .setTexture(item.clients >= item.maxClients ? 'cross' : 'check');
+        const icon = cellContainer.getElement('icon');
+        icon.setFillStyle(item.clients >= item.maxClients ? CARTOON.red : CARTOON.green);
         return cellContainer;
       },
       items: availableRooms,
