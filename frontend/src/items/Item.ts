@@ -23,6 +23,16 @@ export default class Item extends Phaser.Physics.Matter.Sprite {
     this.setDepth(getDepth(body.label as Constants.OBJECT_LABELS));
     this.setScale(0.6);
     this.itemType = itemType;
+
+    // Small friendly floating animation: visual only, no gameplay changes.
+    this.scene.tweens.add({
+      targets: this,
+      y: y - 5,
+      duration: 650,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   removeItem() {
