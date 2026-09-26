@@ -38,61 +38,84 @@ export default class GameHeader extends Phaser.Scene {
     this.cameras.main.setSize(this.width, this.height);
     this.cameras.main.setBackgroundColor(0x8fc5f5);
     this.player = getGameScene().getCurrentPlayer();
-
     this.startTimer = false;
 
-    // Soft, rounded HUD cards: colorful and friendly without changing gameplay.
-    this.add
-      .rectangle(this.width / 2, this.height / 2, this.width, this.height, 0x8fc5f5)
-      .setDepth(-10);
-    this.add
-      .rectangle(this.width / 2, 61, this.width, 6, 0x6fa8e3)
-      .setDepth(-9);
+    // BomBom Panic HUD: bright, rounded and playful, while keeping the
+    // existing gameplay values and update logic untouched.
+    const background = this.add.graphics().setDepth(-20);
+    background.fillStyle(0x8fc5f5, 1);
+    background.fillRect(0, 0, this.width, this.height);
 
-    const cards = [
-      { x: 8, w: 122, color: 0x5c88c7 },
-      { x: 140, w: 122, color: 0xf47c72 },
-      { x: 280, w: 122, color: 0xffc857 },
-      { x: 430, w: 122, color: 0x79c96b },
-      { x: 580, w: 122, color: 0x67b7e8 },
-    ];
+    // Soft lower edge that visually connects the HUD with the arena.
+    const edge = this.add.graphics().setDepth(-19);
+    edge.fillStyle(0x6fa8e3, 0.9);
+    edge.fillRoundedRect(0, 54, this.width, 10, 5);
 
-    cards.forEach((card) => {
-      this.add
-        .rectangle(card.x + card.w / 2, 32, card.w, 50, card.color, 0.96)
-        .setOrigin(0.5)
-        .setStrokeStyle(3, 0xffffff, 0.95)
-        .setDepth(-5);
-    });
+    this.createCard(8, 132, 0x5c88c7);
+    this.createCard(146, 132, 0xf47c72);
+    this.createCard(284, 142, 0xffc857);
+    this.createCard(432, 142, 0x79c96b);
+    this.createCard(580, 142, 0x67b7e8);
 
     this.textTimer = this.createText(
-      0,
-      5,
-      convertSecondsToMMSS(Constants.TIME_LIMIT_SEC - Constants.GAME_PREPARING_TIME - 1)
+      16,
+      7,
+      convertSecondsToMMSS(Constants.TIME_LIMIT_SEC - Constants.GAME_PREPARING_TIME - 1),
+      21
     );
-    this.textHp = this.createText(150, 5, `HP: ${this.player.getHP()}`);
-    this.textBombCount = this.createText(350, 5, `×${this.player.getItemCountOfBombCount()}`);
-    this.textBombStrength = this.createText(500, 5, `×${this.player.getItemCountOfBombStrength()}`);
-    this.textSpeed = this.createText(650, 5, `×${this.player.getItemCountOfSpeed()}`);
+    this.textHp = this.createText(156, 7, `HP: ${this.player.getHP()}`, 21);
+    this.textBombCount = this.createText(340, 10, `×${this.player.getItemCountOfBombCount()}`, 20);
+    this.textBombStrength = this.createText(488, 10, `×${this.player.getItemCountOfBombStrength()}`, 20);
+    this.textSpeed = this.createText(636, 10, `×${this.player.getItemCountOfSpeed()}`, 20);
 
     this.imgBomb = this.add
-      .image(300, 10, Constants.ITEM_TYPE.BOMB_POSSESSION_UP)
+      .image(294, 10, Constants.ITEM_TYPE.BOMB_POSSESSION_UP)
       .setScale(0.5)
-      .setOrigin(0, 0);
-
-    this.add
-      .container(0, 0, [
-        this.textHp,
-        this.imgBomb,
-        this.textBombCount,
-        this.add.image(450, 10, Constants.ITEM_TYPE.BOMB_STRENGTH).setScale(0.5).setOrigin(0, 0),
-        this.textBombStrength,
-        this.add.image(600, 10, Constants.ITEM_TYPE.PLAYER_SPEED).setScale(0.5).setOrigin(0, 0),
-        this.textSpeed,
-      ])
+      .setOrigin(0, 0)
       .setDepth(2000);
 
-    this.add.volumeIcon(this, this.width - 100, -13, isPlay());
+    this.add
+      .image(442, 10, Constants.ITEM_TYPE.BOMB_STRENGTH)
+      .setScale(0.5)
+      .setOrigin(0, 0)
+      .setDepth(2000);
+
+    this.add
+      .image(590, 10, Constants.ITEM_TYPE.PLAYER_SPEED)
+      .setScale(0.5)
+      .setOrigin(0, 0)
+      .setDepth(2000);
+
+    // Small labels make the HUD immediately readable without adding clutter.
+    this.createLabel(18, 8, 'TIME');
+    this.createLabel(158, 8, 'HP');
+
+    this.add.volumeIcon(this, this.width - 72, -5, isPlay());
+  }
+
+  private createCard(x: number, width: number, color: number) {
+    const shadow = this.add.graphics().setDepth(-6);
+    shadow.fillStyle(0x4b6480, 0.28);
+    shadow.fillRoundedRect(x + 2, 5, width, 50, 10);
+
+    const card = this.add.graphics().setDepth(-5);
+    card.fillStyle(color, 0.98);
+    card.fillRoundedRect(x, 2, width, 50, 10);
+    card.lineStyle(3, 0xffffff, 0.95);
+    card.strokeRoundedRect(x, 2, width, 50, 10);
+  }
+
+  private createLabel(x: number, y: number, text: string) {
+    return this.add
+      .text(x, y, text, {
+        fontSize: '9px',
+        stroke: '#ffffff',
+        strokeThickness: 2,
+      })
+      .setFontFamily('PressStart2P')
+      .setColor('#ffffff')
+      .setAlpha(0.9)
+      .setDepth(2001);
   }
 
   create(data: { network: Network; serverTimer: ServerTimer }) {
@@ -125,7 +148,7 @@ export default class GameHeader extends Phaser.Scene {
   }
 
   createText(x: number, y: number, text: string, fontSize = 24): Phaser.GameObjects.Text {
-    const paddingHeight = (this.height - fontSize) / 2;
+    const paddingHeight = Math.max(0, (this.height - fontSize) / 2 - 3);
     return this.add
       .text(x, y, text, {
         fontSize: `${fontSize}px`,
@@ -134,6 +157,7 @@ export default class GameHeader extends Phaser.Scene {
       })
       .setFontFamily('PressStart2P')
       .setColor('#243b63')
-      .setPadding(10, paddingHeight, 10, paddingHeight);
+      .setPadding(4, paddingHeight, 4, paddingHeight)
+      .setDepth(2000);
   }
 }
