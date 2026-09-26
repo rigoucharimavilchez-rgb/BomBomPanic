@@ -36,28 +36,24 @@ export default class GameHeader extends Phaser.Scene {
 
   init() {
     this.cameras.main.setSize(this.width, this.height);
-    this.cameras.main.setBackgroundColor(0x8fc5f5);
+    this.cameras.main.setBackgroundColor(0x8fc9f8);
     this.player = getGameScene().getCurrentPlayer();
     this.startTimer = false;
 
-    // BomBom Panic HUD: cheerful, rounded and game-like.
+    // BomBom Panic HUD: bright sky, chunky rounded cards and playful colors.
     const background = this.add.graphics().setDepth(-20);
-    background.fillStyle(0x8fc5f5, 1);
+    background.fillStyle(0x8fc9f8, 1);
     background.fillRect(0, 0, this.width, this.height);
 
-    // Soft lower edge separating the HUD from the arena.
     const edge = this.add.graphics().setDepth(-19);
-    edge.fillStyle(0x6fa8e3, 0.9);
-    edge.fillRect(0, this.height - 6, this.width, 6);
+    edge.fillStyle(0x5f9edb, 1);
+    edge.fillRoundedRect(0, this.height - 7, this.width, 9, 4);
 
-    // Left-side status cards.
     this.createCard(8, 126, 0x5c88c7);
     this.createCard(142, 106, 0xf47c72);
-
-    // Item cards.
-    this.createCard(256, 142, 0xffc857);
-    this.createCard(406, 142, 0x79c96b);
-    this.createCard(556, 142, 0x67b7e8);
+    this.createCard(256, 142, 0xffd45b);
+    this.createCard(406, 142, 0x76cf70);
+    this.createCard(556, 142, 0x67b9eb);
 
     this.createLabel(20, 7, 'TIME');
     this.createLabel(154, 7, 'HP');
@@ -80,43 +76,34 @@ export default class GameHeader extends Phaser.Scene {
       .setOrigin(0, 0)
       .setDepth(2000);
 
-    this.add
-      .image(416, 10, Constants.ITEM_TYPE.BOMB_STRENGTH)
-      .setScale(0.5)
-      .setOrigin(0, 0)
-      .setDepth(2000);
-
-    this.add
-      .image(566, 10, Constants.ITEM_TYPE.PLAYER_SPEED)
-      .setScale(0.5)
-      .setOrigin(0, 0)
-      .setDepth(2000);
+    this.add.image(416, 10, Constants.ITEM_TYPE.BOMB_STRENGTH).setScale(0.5).setOrigin(0, 0).setDepth(2000);
+    this.add.image(566, 10, Constants.ITEM_TYPE.PLAYER_SPEED).setScale(0.5).setOrigin(0, 0).setDepth(2000);
 
     this.add.volumeIcon(this, this.width - 42, 2, isPlay());
   }
 
   private createCard(x: number, width: number, color: number) {
     const shadow = this.add.graphics().setDepth(-6);
-    shadow.fillStyle(0x4b6480, 0.28);
-    shadow.fillRoundedRect(x + 2, 5, width, 48, 10);
+    shadow.fillStyle(0x35506d, 0.28);
+    shadow.fillRoundedRect(x + 3, 6, width, 48, 12);
 
     const card = this.add.graphics().setDepth(-5);
-    card.fillStyle(color, 0.98);
-    card.fillRoundedRect(x, 2, width, 48, 10);
-    card.lineStyle(3, 0xffffff, 0.95);
-    card.strokeRoundedRect(x, 2, width, 48, 10);
+    card.fillStyle(color, 1);
+    card.fillRoundedRect(x, 2, width, 48, 12);
+    card.lineStyle(3, 0xffffff, 1);
+    card.strokeRoundedRect(x, 2, width, 48, 12);
   }
 
   private createLabel(x: number, y: number, text: string) {
     return this.add
       .text(x, y, text, {
         fontSize: '8px',
-        stroke: '#ffffff',
+        stroke: '#25324a',
         strokeThickness: 2,
       })
       .setFontFamily('PressStart2P')
       .setColor('#ffffff')
-      .setAlpha(0.95)
+      .setAlpha(1)
       .setDepth(2001);
   }
 
@@ -128,7 +115,7 @@ export default class GameHeader extends Phaser.Scene {
         strokeThickness: 3,
       })
       .setFontFamily('PressStart2P')
-      .setColor('#243b63')
+      .setColor('#25324a')
       .setDepth(2001);
   }
 
@@ -169,7 +156,7 @@ export default class GameHeader extends Phaser.Scene {
         strokeThickness: 3,
       })
       .setFontFamily('PressStart2P')
-      .setColor('#243b63')
+      .setColor('#25324a')
       .setDepth(2000);
   }
 }
