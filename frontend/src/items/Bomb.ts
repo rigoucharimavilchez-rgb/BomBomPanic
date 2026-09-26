@@ -12,18 +12,17 @@ import { getDepth } from './util';
 
 export default class Bomb extends Phaser.Physics.Matter.Sprite {
   private readonly id: string;
-
-  // 誘爆時は状況によって爆弾が消えてしまい、座標やシーンが取得できなくなるため保存しておく
-  private readonly stableX: number; // 爆弾が消えても座標を保持するための変数
-  private readonly stableY: number; // 爆弾が消えても座標を保持するための変数
-  private readonly stableScene: Phaser.Scene; // 爆弾が消えてもシーンを保持するための変数
-  private readonly bombType: Constants.BOMB_TYPES; // ボムの種類
-  private readonly bombStrength: number; // 爆発の強さ
-  private readonly sessionId: string; // サーバが一意にセットするセッションID(誰の爆弾か)
-  private readonly removedAt: number; // サーバで管理している爆発する時間
-  private isExploded: boolean; // 爆発したかどうか
+  private readonly stableX: number;
+  private readonly stableY: number;
+  private readonly stableScene: Phaser.Scene;
+  private readonly bombType: Constants.BOMB_TYPES;
+  private readonly bombStrength: number;
+  private readonly sessionId: string;
+  private readonly removedAt: number;
+  private isExploded: boolean;
   private readonly blastPointSprites: Phaser.GameObjects.Image[] = [];
   private readonly se;
+  private bombPulseTween?: Phaser.Tweens.Tween;
 
   constructor(
     id: string,
@@ -55,16 +54,26 @@ export default class Bomb extends Phaser.Physics.Matter.Sprite {
       volume: Config.SOUND_VOLUME,
     });
 
+    // Efecto puramente visual: la bomba "respira" suavemente mientras espera.
+    // No modifica posición, física ni temporizador.
+    if (this.active && this.scene?.tweens) {
+      this.bombPulseTween = this.scene.tweens.add({
+        targets: this,
+        scaleX: 1.08,
+        scaleY: 1.08,
+        duration: 280,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
     if (Config.IS_SHOW_BLAST_POINT) this.displayBlastPoint();
   }
 
-  // 指定の座標から設置可能な座標を返します
   static getSettablePosition(x: number, y: number): { x: number; y: number } {
-    const bx =
-      Math.floor(x / Constants.TILE_WIDTH) * Constants.TILE_WIDTH + Constants.TILE_WIDTH / 2;
-    const by =
-      Math.floor(y / Constants.TILE_HEIGHT) * Constants.TILE_HEIGHT + Constants.TILE_HEIGHT / 2;
-
+    const bx = Math.floor(x / Constants.TILE_WIDTH) * Constants.TILE_WIDTH + Constants.TILE_WIDTH / 2;
+    const by = Math.floor(y / Constants.TILE_HEIGHT) * Constants.TILE_HEIGHT + Constants.TILE_HEIGHT / 2;
     return { x: bx, y: by };
   }
 
@@ -84,12 +93,24 @@ export default class Bomb extends Phaser.Physics.Matter.Sprite {
       ? Constants.DEFAULT_TIP_SIZE * Constants.BLAST_COLLISION_RATIO_X
       : Constants.DEFAULT_TIP_SIZE * Constants.BLAST_COLLISION_RATIO_Y;
 
-    this.stableScene.add
+    const blast = this.stableScene.add
       .blast(this.sessionId, bx, by, playKey, rx, ry)
-      .setScale(scale, scale)
+      .setScale(scale * 0.88, scale * 0.88)
       .setAngle(angle)
       .play(playKey)
       .setSensor(true);
+
+    // Entrada rápida de la explosión: pequeño "pop" cartoon sin tocar su hitbox.
+    if (blast.active && this.stableScene.tweens) {
+      this.stableScene.tweens.add({
+        targets: blast,
+        scaleX: scale,
+        scaleY: scale,
+        alpha: 1,
+        duration: 100,
+        ease: 'Back.Out',
+      });
+    }
   }
 
   private addDirectionBlast(direction: Constants.DIRECTION_TYPE, power: number) {
@@ -136,7 +157,6 @@ export default class Bomb extends Phaser.Physics.Matter.Sprite {
     );
   }
 
-  // 爆発範囲を爆発前に描画する
   private displayBlastPoint() {
     if (this.isExploded) return;
 
@@ -168,12 +188,14 @@ export default class Bomb extends Phaser.Physics.Matter.Sprite {
 
   explode() {
     if (this.isExploded) return;
-    this.blastPointSprites.forEach((sprite) => {
-      sprite.destroy();
-    });
+    this.blastPointSprites.forEach((sprite) => sprite.destroy());
+
+    if (this.bombPulseTween) {
+      this.bombPulseTween.stop();
+      this.bombPulseTween = undefined;
+    }
 
     this.se.play();
-    // center
     const prefix = this.bombType === Constants.BOMB_TYPE.PENETRATION ? 'penetration_' : '';
     this.addBlastSprite(
       this.stableX,
@@ -186,58 +208,36 @@ export default class Bomb extends Phaser.Physics.Matter.Sprite {
     );
 
     const br = this.calcBlastRange();
-    // center 以外
     this.addDirectionBlast(Constants.DIRECTION.UP, br.get(Constants.DIRECTION.UP) ?? 1);
     this.addDirectionBlast(Constants.DIRECTION.DOWN, br.get(Constants.DIRECTION.DOWN) ?? 1);
     this.addDirectionBlast(Constants.DIRECTION.RIGHT, br.get(Constants.DIRECTION.RIGHT) ?? 1);
     this.addDirectionBlast(Constants.DIRECTION.LEFT, br.get(Constants.DIRECTION.LEFT) ?? 1);
   }
 
-  // 既に爆発する時間かどうか
   isRemovedTime(): boolean {
     return this.getRemainTime() <= 0;
   }
 
-  // 爆風の範囲を計算する
   private calcBlastRange(): Map<Constants.DIRECTION_TYPE, number> {
-    // 自分自身から scene を取得すると、爆弾が爆発した後に scene が取得できなくなりエラーになるので window オブジェクトから取得する
     const scene = phaserGlobalGameObject().scene.getScene(Config.SCENE_NAME_GAME);
     const game = scene as Game;
     const map = getDimensionalMap(
-      // TODO: サーバから受け取ったマップの X/ Y のタイル数を使う
       game.getRows(),
       game.getCols(),
       scene,
       getHighestPriorityFromBodies
     );
 
-    // 現在のユーザの爆弾の強さを取得
     const power = this.bombStrength;
-
-    // 現在のユーザの爆弾の位置を取得
     const x = (this.stableX - Constants.TILE_WIDTH / 2) / Constants.TILE_WIDTH;
     const y =
       (this.stableY - Constants.TILE_HEIGHT / 2 - Constants.HEADER_HEIGHT) / Constants.TILE_HEIGHT;
 
-    // 現在のユーザの爆弾の位置から上下左右の範囲を計算
     const m = new Map<Constants.DIRECTION_TYPE, number>();
-
-    m.set(
-      Constants.DIRECTION.UP,
-      calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.UP, this.bombType)
-    );
-    m.set(
-      Constants.DIRECTION.DOWN,
-      calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.DOWN, this.bombType)
-    );
-    m.set(
-      Constants.DIRECTION.LEFT,
-      calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.LEFT, this.bombType)
-    );
-    m.set(
-      Constants.DIRECTION.RIGHT,
-      calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.RIGHT, this.bombType)
-    );
+    m.set(Constants.DIRECTION.UP, calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.UP, this.bombType));
+    m.set(Constants.DIRECTION.DOWN, calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.DOWN, this.bombType));
+    m.set(Constants.DIRECTION.LEFT, calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.LEFT, this.bombType));
+    m.set(Constants.DIRECTION.RIGHT, calcBlastRangeFromDirection(map, x, y, power, Constants.DIRECTION.RIGHT, this.bombType));
     return m;
   }
 
@@ -255,27 +255,26 @@ export default class Bomb extends Phaser.Physics.Matter.Sprite {
     this.setDepth(getDepth(body.label as Constants.OBJECT_LABELS));
   }
 
-  // 引数の MatterJS.BodyType が爆弾の当たり判定と重なっているかどうかを返す
   isOverlapping(mp: Phaser.Physics.Matter.MatterPhysics, target: MatterJS.BodyType) {
     return mp.overlap(this.body as MatterJS.BodyType, [target]);
   }
 
-  // ボムが爆発した後の処理
   afterExplosion() {
+    if (this.bombPulseTween) {
+      this.bombPulseTween.stop();
+      this.bombPulseTween = undefined;
+    }
     this.destroy();
     this.isExploded = true;
   }
 
-  // 誘爆時の処理
   detonated(id: string) {
-    // addEvent より setTimeout の方が遅延がマシだったので setTimeout を使う
     setTimeout(() => {
       this.explode();
       this.afterExplosion();
     }, Constants.BOMB_DETONATION_DELAY);
   }
 
-  // 爆発するまでの時間を返す
   getRemainTime(): number {
     if (this.removedAt === null || this.removedAt === 0) return 0;
     const now: number = getGameScene().getNetwork().now();
@@ -317,28 +316,23 @@ Phaser.GameObjects.GameObjectFactory.register(
     sprite.setStatic(true);
     sprite.setSensor(true);
 
-    // 爆弾のアニメーションを設定
-    // 爆弾のアニメーションは、爆発するまでの時間に応じて速度を変える
     sprite.play(
       {
         key: Config.BOMB_ANIMATION_KEY,
-        // 秒間に表示する画像の枚数
         frameRate: Config.BOMB_SPRITE_FRAME_COUNT / (sprite.getRemainTime() / 1000),
       },
       false
     );
 
-    // サーバからもらった爆発時間になったら爆発するため、定期的に確認する
     const timer = setInterval(() => {
       if (sprite.isRemovedTime()) {
-        // 誘爆などの理由により既に爆発している場合は何もしない
         if (!sprite.getIsExploded()) {
           sprite.explode();
           sprite.afterExplosion();
         }
         clearInterval(timer);
       }
-    }, 10); // サーバとの遅延を減らすため、10msごとに確認
+    }, 10);
 
     return sprite;
   }
@@ -374,7 +368,7 @@ export class Blast extends Phaser.Physics.Matter.Sprite {
     this.scene.time.addEvent({
       delay: Constants.BLAST_AVAILABLE_TIME,
       callback: () => {
-        this.destroy();
+        if (this.active) this.destroy();
       },
     });
   }
