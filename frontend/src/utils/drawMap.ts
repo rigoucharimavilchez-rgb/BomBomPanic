@@ -18,6 +18,16 @@ export const drawGround = (scene: Phaser.Scene) => {
       const newy = Constants.HEADER_HEIGHT + tileHeight / 2 + tileHeight * y;
       const texture = random > 7 ? Constants.MAP_ASSETS.grass_1 : Constants.MAP_ASSETS.grass_2;
       scene.add.sprite(newx, newy, texture);
+
+      // Tiny decorative highlights make the floor feel more lively while
+      // remaining purely visual and behind the gameplay objects.
+      if (random === 0 || random === 5) {
+        scene.add.circle(newx - 10, newy - 9, 2, 0xffffff, 0.18).setDepth(-1);
+      }
+      if (random === 3 || random === 8) {
+        scene.add.circle(newx + 8, newy + 10, 1.5, 0x3d9d36, 0.16).setDepth(-1);
+      }
+
       if (!(x % 2 === 0 && y % 2 === 0)) {
         if (random < 2) {
           scene.add.sprite(newx, newy, Constants.MAP_ASSETS.plants, Phaser.Math.Between(0, 6));
@@ -45,7 +55,8 @@ export const drawWalls = (scene: Phaser.Scene) => {
     addOuterWall(scene, cols - 1, y, Constants.GROUND_TYPES.right);
   }
 
-  // add inner walls
+  // Inner walls keep the classic Bomberman layout, with two rock variants
+  // to give the arena a friendlier cartoon texture.
   for (let y = 2; y < rows - 1; y += 2) {
     for (let x = 2; x < cols - 1; x += 2) {
       const random = Phaser.Math.Between(1, 2);
@@ -64,9 +75,10 @@ export const drawBlocks = (scene: Phaser.Scene, blocks: MapSchema<Block>) => {
     const random = Math.random();
     let randomHeight = random * Constants.GAME_PREPARING_TIME * 1000;
     if (flag) {
-      randomHeight = Constants.GAME_PREPARING_TIME * 1000; // 必ず一つのブロックをゲーム開始演出時間に合わせる
+      randomHeight = Constants.GAME_PREPARING_TIME * 1000;
       flag = false;
     }
+
     const shadow = scene.add
       .rectangle(
         block.x,
