@@ -5,6 +5,7 @@ import { getDepth } from './util';
 
 export default class Item extends Phaser.Physics.Matter.Sprite {
   public readonly itemType: Constants.ITEM_TYPES;
+  private floatTween?: Phaser.Tweens.Tween;
 
   constructor(
     world: Phaser.Physics.Matter.World,
@@ -24,18 +25,25 @@ export default class Item extends Phaser.Physics.Matter.Sprite {
     this.setScale(0.6);
     this.itemType = itemType;
 
-    // Small friendly floating animation: visual only, no gameplay changes.
-    this.scene.tweens.add({
-      targets: this,
-      y: y - 5,
-      duration: 650,
-      ease: 'Sine.easeInOut',
-      yoyo: true,
-      repeat: -1,
-    });
+    // Decorative only: do not start a tween until the GameObject is fully active.
+    if (this.active && this.scene && this.scene.tweens) {
+      this.floatTween = this.scene.tweens.add({
+        targets: this,
+        y: this.y - 5,
+        duration: 650,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+      });
+    }
   }
 
   removeItem() {
+    if (this.floatTween) {
+      this.floatTween.stop();
+      this.floatTween.remove();
+      this.floatTween = undefined;
+    }
     this.destroy();
   }
 
