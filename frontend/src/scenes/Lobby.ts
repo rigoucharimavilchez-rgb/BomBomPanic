@@ -76,6 +76,18 @@ export default class Lobby extends Phaser.Scene {
     this.playerName = data.playerName;
     this.add.volumeIcon(this, Constants.WIDTH - 100, 10, isPlay());
 
+    // BomBom Panic visual identity: keep the lobby consistent with the title screen.
+    this.add.image(Constants.WIDTH / 2, 62, 'title').setScale(0.82);
+    this.add
+      .text(Constants.WIDTH / 2, 112, 'MULTIPLAYER LOBBY', {
+        fontFamily: 'PressStart2P',
+        fontSize: '13px',
+        color: '#25324a',
+        stroke: '#ffffff',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+
     this.availableRooms = this.getAvailableRooms();
     this.network.onRoomsUpdated(this.handleRoomsUpdated, this);
     this.network.onGameStartInfo(async (data: IGameStartInfo) => {
@@ -96,8 +108,8 @@ export default class Lobby extends Phaser.Scene {
       this.handlePlayerIsReady(player);
     });
 
-    this.buttons = createButtons(this, Constants.WIDTH / 2, Constants.HEIGHT / 5, [
-      createButton(this, 'create room', Constants.LIGHT_RED),
+    this.buttons = createButtons(this, Constants.WIDTH / 2, Constants.HEIGHT / 5 + 10, [
+      createButton(this, 'create room', Constants.YELLOW ?? Constants.LIGHT_RED),
     ]);
     this.buttons.on('button.click', this.handleRoomCreate, this);
 
@@ -176,7 +188,6 @@ export default class Lobby extends Phaser.Scene {
   }
 
   private async handleGameStart(data: IGameStartInfo) {
-    // ロビーシーン停止の処理
     this.bgm?.stop();
     this.scene.stop(Config.SCENE_NAME_LOBBY);
     this.network.removeAllEventListeners();
