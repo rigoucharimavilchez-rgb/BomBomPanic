@@ -17,6 +17,7 @@ import Player from './Player';
 import Timer from './Timer';
 
 const CHARACTER_PREFIX = /^\[\[char:([a-z0-9_-]+)\]\]/i;
+const MAP_PREFIX = /^\[\[map:([a-z0-9_-]+)\]\]/i;
 
 export default class GameRoomState extends Schema {
   @type(GameState)
@@ -86,10 +87,10 @@ export default class GameRoomState extends Schema {
     const idx = this.getPlayerIdx();
     if (idx === -1) return;
 
-    const match = rawPlayerName.match(CHARACTER_PREFIX);
-    const embeddedCharacter = match?.[1]?.toLowerCase();
+    const characterMatch = rawPlayerName.match(CHARACTER_PREFIX);
+    const embeddedCharacter = characterMatch?.[1]?.toLowerCase();
     const selectedCharacter = characterId ?? embeddedCharacter;
-    const playerName = rawPlayerName.replace(CHARACTER_PREFIX, '');
+    const playerName = rawPlayerName.replace(CHARACTER_PREFIX, '').replace(MAP_PREFIX, '');
 
     const player = new Player(sessionId, idx, playerName, selectedCharacter);
     player.idx = idx;
@@ -147,7 +148,6 @@ export default class GameRoomState extends Schema {
         return i;
       }
     }
-
     return -1;
   }
 
