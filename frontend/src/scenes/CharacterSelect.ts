@@ -149,7 +149,9 @@ export default class CharacterSelect extends Phaser.Scene {
       if (this.isLocked(character)) return;
       localStorage.setItem(SELECTED_CHARACTER_KEY, character.id);
       this.scene.start(Config.SCENE_NAME_MAP_SELECT, {
-        network: this.network, playerName: this.playerName, bgm: this.bgm,
+        network: this.network,
+        playerName: `[[char:${character.id}]]${this.playerName}`,
+        bgm: this.bgm,
       });
     });
   }
