@@ -17,15 +17,13 @@ import Player from './Player';
 import Timer from './Timer';
 
 const CHARACTER_PREFIX = /^\[\[char:([a-z0-9_-]+)\]\]/i;
-const MAP_PREFIX = /^\[\[map:([a-z0-9_-]+)\]\]/i;
+const MAP_PREFIX = /\[\[map:([a-z0-9_-]+)\]\]/i;
 
 export default class GameRoomState extends Schema {
   @type(GameState)
   gameState: GameState = new GameState();
-
   @type(Timer)
   readonly timer = new Timer();
-
   @type(GameResult)
   gameResult!: GameResult;
 
@@ -40,7 +38,6 @@ export default class GameRoomState extends Schema {
   private readonly bombToExplodeQueue: GameQueue<Bomb> = new GameQueue<Bomb>();
   private readonly blockToDestroyQueue: GameQueue<Block> = new GameQueue<Block>();
   private readonly itemToDestroyQueue: GameQueue<Item> = new GameQueue<Item>();
-
   readonly enemies: Enemy[] = [];
 
   @type(Map)
@@ -51,29 +48,12 @@ export default class GameRoomState extends Schema {
     this.gameMap = new Map(mapId);
   }
 
-  getPlayer(sessionId: string): Player | undefined {
-    return this.players.get(sessionId);
-  }
-
-  getPlayers(): Player[] {
-    return Array.from(this.players.values());
-  }
-
-  getPlayersCount() {
-    return this.players.size;
-  }
-
-  getAvailablePlayers(): Player[] {
-    return Array.from(this.players.values()).filter((player) => !player.isDead());
-  }
-
-  getAlivePlayers() {
-    return this.getPlayers().filter((player) => !player.isDead());
-  }
-
-  setTimer() {
-    this.timer.set(Date.now());
-  }
+  getPlayer(sessionId: string): Player | undefined { return this.players.get(sessionId); }
+  getPlayers(): Player[] { return Array.from(this.players.values()); }
+  getPlayersCount() { return this.players.size; }
+  getAvailablePlayers(): Player[] { return Array.from(this.players.values()).filter((player) => !player.isDead()); }
+  getAlivePlayers() { return this.getPlayers().filter((player) => !player.isDead()); }
+  setTimer() { this.timer.set(Date.now()); }
 
   setGameResult() {
     const r = generateGameResult(this);
@@ -111,25 +91,11 @@ export default class GameRoomState extends Schema {
     return enemy;
   }
 
-  deleteBomb(bomb: Bomb) {
-    this.bombs.delete(bomb.id);
-  }
-
-  getBombToCreateQueue(): GameQueue<Bomb> {
-    return this.bombToCreateQueue;
-  }
-
-  getBombToExplodeQueue(): GameQueue<Bomb> {
-    return this.bombToExplodeQueue;
-  }
-
-  getBlockToDestroyQueue(): GameQueue<Block> {
-    return this.blockToDestroyQueue;
-  }
-
-  getItemToDestroyQueue(): GameQueue<Item> {
-    return this.itemToDestroyQueue;
-  }
+  deleteBomb(bomb: Bomb) { this.bombs.delete(bomb.id); }
+  getBombToCreateQueue(): GameQueue<Bomb> { return this.bombToCreateQueue; }
+  getBombToExplodeQueue(): GameQueue<Bomb> { return this.bombToExplodeQueue; }
+  getBlockToDestroyQueue(): GameQueue<Block> { return this.blockToDestroyQueue; }
+  getItemToDestroyQueue(): GameQueue<Item> { return this.itemToDestroyQueue; }
 
   createItem(x: number, y: number, itemType: Constants.ITEM_TYPES) {
     const item = new Item(x, y, itemType);
@@ -137,9 +103,7 @@ export default class GameRoomState extends Schema {
     return item;
   }
 
-  deleteItem(item: Item) {
-    this.items.delete(item.id);
-  }
+  deleteItem(item: Item) { this.items.delete(item.id); }
 
   getPlayerIdx() {
     for (let i = 0; i < this.playerIdxsAvail.length; i++) {
@@ -152,17 +116,13 @@ export default class GameRoomState extends Schema {
   }
 
   hasBomb(bombMap: number[][]): number[][] {
-    const result = Array(bombMap.length)
-      .fill(undefined)
-      .map(() => Array(bombMap[0].length).fill(undefined));
-
+    const result = Array(bombMap.length).fill(undefined).map(() => Array(bombMap[0].length).fill(undefined));
     for (const key of this.bombs.keys()) {
       const bomb = this.bombs.get(key);
       if (bomb === undefined) continue;
       const { x, y } = PixelToTile(bomb.x, bomb.y);
       result[y][x] = bomb;
     }
-
     return result;
   }
 }
