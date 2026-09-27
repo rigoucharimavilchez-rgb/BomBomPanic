@@ -37,18 +37,6 @@ export default class CharacterSelect extends Phaser.Scene {
     CHARACTER_ROSTER.forEach((character, index) => this.createCard(character, index));
     this.createBottomBar();
     this.refreshSelection();
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      const px = pointer.x;
-      const py = pointer.y;
-      this.cards.forEach((card, index) => {
-        const bounds = card.getBounds();
-        if (bounds.contains(px, py) && !this.isLocked(CHARACTER_ROSTER[index])) {
-          this.selected = index;
-          this.refreshSelection();
-        }
-      });
-    });
   }
 
   private isLocked(character: CharacterDefinition) {
@@ -61,6 +49,13 @@ export default class CharacterSelect extends Phaser.Scene {
     const x = startX + (index % columns) * (cardW + gapX), y = 135 + Math.floor(index / columns) * (cardH + gapY);
     const locked = this.isLocked(character);
     const container = this.add.container(x, y);
+    container.setSize(cardW, cardH);
+    container.setInteractive(
+      new Phaser.Geom.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH),
+      Phaser.Geom.Rectangle.Contains,
+      { useHandCursor: !locked }
+    );
+
     container.add(this.add.rectangle(4, 6, cardW, cardH, 0x52647a, 0.25));
     const panel = this.add.rectangle(0, 0, cardW, cardH, locked ? 0xd9dee5 : 0xfffbef);
     panel.setStrokeStyle(4, character.accent, 1); container.add(panel);
@@ -70,12 +65,18 @@ export default class CharacterSelect extends Phaser.Scene {
     container.add(this.add.text(0, 34, character.stats, { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '10px', color: locked ? '#7b8794' : '#d67b20' }).setOrigin(0.5));
     container.add(this.add.text(0, 57, character.description, { fontFamily: 'Arial', fontSize: '9px', color: '#5c6b7c', align: 'center', wordWrap: { width: 164 } }).setOrigin(0.5));
     if (locked) container.add(this.add.text(0, 73, character.unlockText ?? 'BLOQUEADO', { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '9px', color: '#ffffff', backgroundColor: '#657180', padding: { left: 7, right: 7, top: 4, bottom: 4 } }).setOrigin(0.5));
-    container.setSize(cardW, cardH);
+
+    container.on('pointerdown', () => {
+      if (this.isLocked(character)) return;
+      this.selected = index;
+      localStorage.setItem(SELECTED_CHARACTER_KEY, character.id);
+      this.refreshSelection();
+    });
     this.cards.push(container);
   }
 
   private refreshSelection() {
-    this.cards.forEach((card, index) => card.setScale(index === this.selected && !this.isLocked(CHARACTER_ROSTER[index]) ? 1.04 : 1));
+    this.cards.forEach((card, index) => card.setScale(index === this.selected && !this.isLocked(CHARACTER_ROSTER[index]) ? 1.06 : 1));
   }
 
   private createBottomBar() {
