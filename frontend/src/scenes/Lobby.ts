@@ -18,6 +18,8 @@ import ContainerLite from 'phaser3-rex-plugins/plugins/containerlite';
 import Buttons from 'phaser3-rex-plugins/templates/ui/buttons/Buttons';
 import { isPlay } from '../utils/sound';
 import { addBackground } from '../utils/title';
+import { SELECTED_CHARACTER_KEY } from '../content/characterRoster';
+import { SELECTED_MAP_KEY } from '../content/mapRoster';
 
 export interface IAvailableRoom {
   id: string;
@@ -36,6 +38,7 @@ export default class Lobby extends Phaser.Scene {
   private gridTable?: GridTable;
   private dialog?: Dialog;
   private playerName = '';
+  private customizeButton?: Phaser.GameObjects.Text;
 
   constructor() {
     super(Config.SCENE_NAME_LOBBY);
@@ -46,6 +49,7 @@ export default class Lobby extends Phaser.Scene {
     this.buttons = undefined;
     this.gridTable = undefined;
     this.dialog = undefined;
+    this.customizeButton = undefined;
 
     this.bgm = this.sound.add('opening', { volume: Config.SOUND_VOLUME });
     this.se1 = this.sound.add('select', { volume: Config.SOUND_VOLUME });
@@ -71,6 +75,15 @@ export default class Lobby extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    this.customizeButton = this.add
+      .text(Constants.WIDTH - 185, 112, '⚙ CONFIGURAR', {
+        fontFamily: 'Arial', fontStyle: 'bold', fontSize: '13px', color: '#25324a',
+        backgroundColor: '#ffffff', padding: { left: 12, right: 12, top: 8, bottom: 8 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    this.customizeButton.on('pointerdown', () => { void this.openCustomization(); });
+
     this.availableRooms = this.getAvailableRooms();
     this.network.onRoomsUpdated(this.handleRoomsUpdated, this);
     this.network.onGameStartInfo(async (data: IGameStartInfo) => { await this.handleGameStart(data); });
@@ -94,7 +107,25 @@ export default class Lobby extends Phaser.Scene {
   }
 
   private getDisplayName() {
-    return this.playerName.replace(/^\[\[char:[a-z0-9_-]+\]\]/i, '');
+    return this.playerName.replace(/^(\[\[(?:char|map):[a-z0-9_-]+\]\])+/i, '');
+  }
+
+  private getEncodedPlayerName() {
+    const character = localStorage.getItem(SELECTED_CHARACTER_KEY) ?? 'axel';
+    const map = localStorage.getItem(SELECTED_MAP_KEY) ?? 'green-garden';
+    return `[[char:${character}]][[map:${map}]]${this.playerName}`;
+  }
+
+  private async openCustomization() {
+    if (this.network.room !== undefined) await this.network.leaveRoom();
+    this.dialog = undefined;
+    this.customizeButton?.disableInteractive();
+    this.scene.start(Config.SCENE_NAME_CHARACTER_SELECT, {
+      network: this.network,
+      playerName: this.getDisplayName(),
+      bgm: this.bgm,
+      fromLobby: true,
+    });
   }
 
   private getAvailableRooms() {
@@ -118,8 +149,8 @@ export default class Lobby extends Phaser.Scene {
   private handleRoomsUpdated() {
     this.availableRooms = this.getAvailableRooms();
     if (this.gridTable !== undefined) {
-      this.gridTable?.setItems(this.availableRooms);
-      this.gridTable?.refresh();
+      this.gridTable.setItems(this.availableRooms);
+      this.gridTable.refresh();
     }
   }
 
@@ -132,7 +163,7 @@ export default class Lobby extends Phaser.Scene {
         name: this.getDisplayName(),
         password: null,
         autoDispose: true,
-        playerName: this.playerName,
+        playerName: this.getEncodedPlayerName(),
       });
       this.dialog = createDialog(
         this, Constants.WIDTH / 2, Constants.HEIGHT / 2,
@@ -149,7 +180,7 @@ export default class Lobby extends Phaser.Scene {
     if (this.dialog === undefined) {
       this.se1?.play();
       this.disableLobbyButtons();
-      await this.network.joinCustomRoom(room.id, null, this.playerName);
+      await this.network.joinCustomRoom(room.id, null, this.getEncodedPlayerName());
       this.dialog = createDialog(
         this, Constants.WIDTH / 2, Constants.HEIGHT / 2,
         () => this.onDialogReady(), () => this.onDialogClose()
@@ -244,10 +275,12 @@ export default class Lobby extends Phaser.Scene {
   private disableLobbyButtons() {
     this.gridTable?.off('cell.click', this.handleRoomJoin, this);
     this.buttons?.setButtonEnable(false);
+    this.customizeButton?.disableInteractive();
   }
 
   private enableLobbyButtons() {
     this.gridTable?.on('cell.click', this.handleRoomJoin, this);
     this.buttons?.setButtonEnable(true);
+    this.customizeButton?.setInteractive({ useHandCursor: true });
   }
 }
