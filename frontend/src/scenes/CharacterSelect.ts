@@ -60,8 +60,8 @@ export default class CharacterSelect extends Phaser.Scene {
     const y = startY + Math.floor(index / columns) * (cardH + gapY);
 
     const container = this.add.container(x, y);
-    const shadow = this.add.rectangle(4, 6, cardW, cardH, 0x52647a, 0.25).setOrigin(0.5).setRadius?.(18);
-    if (shadow) container.add(shadow);
+    const shadow = this.add.rectangle(4, 6, cardW, cardH, 0x52647a, 0.25).setOrigin(0.5);
+    container.add(shadow);
     const panel = this.add.rectangle(0, 0, cardW, cardH, 0xfffbef).setOrigin(0.5);
     panel.setStrokeStyle(4, character.accent, 1);
     container.add(panel);
@@ -94,9 +94,7 @@ export default class CharacterSelect extends Phaser.Scene {
   }
 
   private refreshSelection() {
-    this.cards.forEach((card, index) => {
-      card.setScale(index === this.selected ? 1.04 : 1);
-    });
+    this.cards.forEach((card, index) => card.setScale(index === this.selected ? 1.04 : 1));
   }
 
   private createBottomBar() {
