@@ -42,7 +42,13 @@ export default class GameRoomState extends Schema {
 
   readonly enemies: Enemy[] = [];
 
-  @type(Map) gameMap = new Map();
+  @type(Map)
+  gameMap: Map;
+
+  constructor(mapId: string = 'green-garden') {
+    super();
+    this.gameMap = new Map(mapId);
+  }
 
   getPlayer(sessionId: string): Player | undefined {
     return this.players.get(sessionId);
@@ -80,8 +86,6 @@ export default class GameRoomState extends Schema {
     const idx = this.getPlayerIdx();
     if (idx === -1) return;
 
-    // CharacterSelect prefixes the name so the existing room API can carry the selection
-    // without changing the Colyseus room protocol. The prefix never reaches the visible name.
     const match = rawPlayerName.match(CHARACTER_PREFIX);
     const embeddedCharacter = match?.[1]?.toLowerCase();
     const selectedCharacter = characterId ?? embeddedCharacter;
