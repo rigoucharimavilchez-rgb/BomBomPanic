@@ -24,7 +24,7 @@ export default class GameRoomState extends Schema {
   readonly timer = new Timer();
 
   @type(GameResult)
-  gameResult!: GameResult; // ゲーム結果
+  gameResult!: GameResult;
 
   playerIdxsAvail: boolean[] = new Array(Constants.MAX_PLAYER).fill(true);
   @type({ map: Player }) players = new MapSchema<Player>();
@@ -33,13 +33,9 @@ export default class GameRoomState extends Schema {
   @type({ map: Item }) items = new MapSchema<Item>();
   @type({ map: Block }) blocks = new MapSchema<Block>();
 
-  // 爆弾を作成するキュー
   private readonly bombToCreateQueue: GameQueue<Bomb> = new GameQueue<Bomb>();
-  // 爆弾を爆発させるキュー
   private readonly bombToExplodeQueue: GameQueue<Bomb> = new GameQueue<Bomb>();
-  // ブロックを破壊するキュー
   private readonly blockToDestroyQueue: GameQueue<Block> = new GameQueue<Block>();
-  // アイテムを破壊するキュー
   private readonly itemToDestroyQueue: GameQueue<Item> = new GameQueue<Item>();
 
   readonly enemies: Enemy[] = [];
@@ -58,7 +54,6 @@ export default class GameRoomState extends Schema {
     return this.players.size;
   }
 
-  // 生きてるプレイヤーのみを返します
   getAvailablePlayers(): Player[] {
     return Array.from(this.players.values()).filter((player) => !player.isDead());
   }
@@ -79,10 +74,11 @@ export default class GameRoomState extends Schema {
     }
   }
 
-  createPlayer(sessionId: string, playerName: string): Player | undefined {
-    const player = new Player(sessionId, this.getPlayersCount(), playerName);
+  createPlayer(sessionId: string, playerName: string, characterId?: string): Player | undefined {
     const idx = this.getPlayerIdx();
     if (idx === -1) return;
+
+    const player = new Player(sessionId, idx, playerName, characterId);
     player.idx = idx;
     player.x = Constants.INITIAL_PLAYER_POSITION[idx].x;
     player.y = Constants.INITIAL_PLAYER_POSITION[idx].y;
@@ -142,7 +138,6 @@ export default class GameRoomState extends Schema {
     return -1;
   }
 
-  // マップの各マスに対して、爆弾があるかどうかを返す
   hasBomb(bombMap: number[][]): number[][] {
     const result = Array(bombMap.length)
       .fill(undefined)
