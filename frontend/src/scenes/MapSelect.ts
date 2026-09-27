@@ -47,11 +47,11 @@ export default class MapSelect extends Phaser.Scene {
     const x = startX + (index % columns) * (cardW + gapX), y = 135 + Math.floor(index / columns) * (cardH + gapY);
     const container = this.add.container(x, y);
     container.setSize(cardW, cardH);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH),
-      Phaser.Geom.Rectangle.Contains,
-      { useHandCursor: true }
-    );
+    container.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true,
+    });
 
     container.add(this.add.rectangle(4, 6, cardW, cardH, 0x52647a, 0.25).setOrigin(0.5));
     const panel = this.add.rectangle(0, 0, cardW, cardH, 0xfffbef).setOrigin(0.5); panel.setStrokeStyle(4, map.accent, 1); container.add(panel);
