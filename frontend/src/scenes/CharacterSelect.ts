@@ -50,11 +50,11 @@ export default class CharacterSelect extends Phaser.Scene {
     const locked = this.isLocked(character);
     const container = this.add.container(x, y);
     container.setSize(cardW, cardH);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH),
-      Phaser.Geom.Rectangle.Contains,
-      { useHandCursor: !locked }
-    );
+    container.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: !locked,
+    });
 
     container.add(this.add.rectangle(4, 6, cardW, cardH, 0x52647a, 0.25));
     const panel = this.add.rectangle(0, 0, cardW, cardH, locked ? 0xd9dee5 : 0xfffbef);
