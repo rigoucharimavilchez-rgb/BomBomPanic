@@ -13,6 +13,8 @@ import Enemy from './schema/Enemy';
 import GameRoomState from './schema/GameRoomState';
 import Item from './schema/Item';
 
+const MAP_PREFIX = /^\[\[map:([a-z0-9_-]+)\]\]/i;
+
 export default class GameRoom extends Room<GameRoomState> {
   engine!: GameEngine;
   private name?: string;
@@ -21,15 +23,17 @@ export default class GameRoom extends Room<GameRoomState> {
 
   async onCreate(options: any) {
     const { autoDispose, playerName } = options;
-    this.name = playerName;
+    const mapMatch = typeof playerName === 'string' ? playerName.match(MAP_PREFIX) : null;
+    const selectedMap = mapMatch?.[1]?.toLowerCase() ?? 'green-garden';
+    this.name = typeof playerName === 'string' ? playerName.replace(MAP_PREFIX, '') : '';
     this.maxClients = Constants.MAX_PLAYER;
     this.autoDispose = autoDispose;
-    await this.setMetadata({ name: this.name, locked: false });
+    await this.setMetadata({ name: this.name, locked: false, mapId: selectedMap });
 
     // ルームで使用する時計
     this.clock.start();
 
-    this.setState(new GameRoomState());
+    this.setState(new GameRoomState(selectedMap));
     this.engine = new GameEngine(this);
 
     // ゲーム開始をクライアントから受け取る
@@ -39,7 +43,6 @@ export default class GameRoom extends Room<GameRoomState> {
         switch (gameState) {
           case Constants.PLAYER_GAME_STATE.READY: {
             if (this.state.gameState.isPlaying()) {
-              // ゲームが既に開始している場合
               const data = {
                 serverTimer: this.state.timer,
               };
@@ -71,28 +74,20 @@ export default class GameRoom extends Room<GameRoomState> {
 
     // クライアントからの移動入力を受け取ってキューに詰める
     this.onMessage(Constants.NOTIFICATION_TYPE.PLAYER_MOVE, (client, data: any) => {
-      // get reference to the player who sent the message
       const player = this.state.getPlayer(client.sessionId);
       if (player === undefined) return;
-
-      // 既に死んでいたら無視
       if (player.isDead()) return;
-
       player.inputQueue.push(data);
     });
 
-    // TODO:クライアントからのボム設置入力を受け取ってキューに詰める
     this.onMessage(Constants.NOTIFICATION_TYPE.PLAYER_BOMB, (client) => {
-      // キューに詰める
       const player = this.state.getPlayer(client.sessionId);
       if (player === undefined) return;
       this.engine.bombService.enqueueBomb(player);
     });
 
-    // ゲーム結果をチェックする
     this.clock.setInterval(() => this.state.setGameResult(), Constants.CHECK_GAME_RESULT_INTERVAL);
 
-    // FRAME_RATE ごとに fixedUpdate を呼ぶ
     let elapsedTime: number = 0;
     this.setSimulationInterval((deltaTime) => {
       elapsedTime += deltaTime;
@@ -103,7 +98,6 @@ export default class GameRoom extends Room<GameRoomState> {
 
       while (elapsedTime >= Constants.FRAME_RATE) {
         this.state.timer.updateNow();
-
         elapsedTime -= Constants.FRAME_RATE;
 
         for (const [, player] of this.state.players) {
@@ -114,41 +108,24 @@ export default class GameRoom extends Room<GameRoomState> {
           }
         }
 
-        // 爆弾の衝突判定の更新（プレイヤーが降りた場合は判定を変える)
         this.engine.bombService.updateBombCollision();
 
-        // 爆弾の処理
         this.objectCreateHandler(this.state.getBombToCreateQueue(), (bomb) =>
           this.createBombEvent(bomb)
         );
         this.objectRemoveHandler(this.state.getBombToExplodeQueue(), (bomb) =>
           this.removeBombEvent(bomb)
         );
-
-        // ブロックの処理
         this.objectRemoveHandler(this.state.getBlockToDestroyQueue(), (block) =>
           this.removeBlockEvent(block)
         );
-
-        // アイテムの処理
         this.objectRemoveHandler(this.state.getItemToDestroyQueue(), (item) =>
           this.removeItemEvent(item)
         );
 
-        // ゲーム終了判定 TODO: ロビーができて、ちゃんとゲーム開始判定ができたら有効化する
-        // if (
-        //   this.state.gameState.isPlaying() &&
-        //   this.state.gameState.isRemainPlayerZeroOrOne(this.state.players)
-        // )
-        //   this.state.gameState.setFinished();
-
         Matter.Engine.update(this.engine.engine, deltaTime);
       }
     });
-
-    /*
-    デバッグ用
-    */
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_PLAYER_WIN, (client, data: any) => {
       if (!IS_BACKEND_DEBUG) return;
@@ -187,20 +164,15 @@ export default class GameRoom extends Room<GameRoomState> {
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_FREEZE_ALL_CPU, (client, data: any) => {
       if (!IS_BACKEND_DEBUG) return;
-      this.state.enemies.forEach((enemy) => {
-        enemy.debugSetFreeze();
-      });
+      this.state.enemies.forEach((enemy) => enemy.debugSetFreeze());
     });
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_UNFREEZE_ALL_CPU, (client, data: any) => {
       if (!IS_BACKEND_DEBUG) return;
-      this.state.enemies.forEach((enemy) => {
-        enemy.debugSetUnFreeze();
-      });
+      this.state.enemies.forEach((enemy) => enemy.debugSetUnFreeze());
     });
   }
 
-  // ゲーム開始イベント
   private async startGame() {
     if (!this.state.gameState.isPlaying()) {
       await this.lock();
@@ -211,7 +183,6 @@ export default class GameRoom extends Room<GameRoomState> {
     }
   }
 
-  // CPU を追加する
   private addEnemy() {
     const enemyCount = Constants.MAX_PLAYER - this.state.getPlayersCount();
 
@@ -221,14 +192,6 @@ export default class GameRoom extends Room<GameRoomState> {
       this.state.enemies.push(enemy);
     }
   }
-
-  // キューに詰められた入力を処理し、キャラの移動を行う
-  // TODO: 当たり判定
-  // private fixedUpdate(deltaTime: number) {
-  //   this.state.players.forEach((player) => {
-  //     this.engine?.updatePlayer(player, deltaTime);
-  //   });
-  // }
 
   onJoin(client: Client, options: { playerName: string }) {
     console.log(client.sessionId, 'joined!');
@@ -248,14 +211,9 @@ export default class GameRoom extends Room<GameRoomState> {
     console.log('room', this.roomId, 'disposing...');
   }
 
-  /*
-  イベント関連
-  */
-
-  // 爆弾追加のイべント
   private createBombEvent(b: PlacementObjectInterface) {
     const bomb = b as Bomb;
-    const isPlaced = this.engine.playerService.placeBomb(bomb); // ボムを設置する
+    const isPlaced = this.engine.playerService.placeBomb(bomb);
     if (isPlaced) {
       this.state.getBombToExplodeQueue().enqueue(bomb);
     } else {
@@ -263,59 +221,40 @@ export default class GameRoom extends Room<GameRoomState> {
     }
   }
 
-  // 爆弾削除のイべント
   private removeBombEvent(b: PlacementObjectInterface) {
     const bomb = b as Bomb;
     this.engine.bombService.explode(bomb);
   }
 
-  // ブロック削除のイべント
   private removeBlockEvent(b: PlacementObjectInterface) {
     const block = b as Block;
     this.engine.mapService.destroyBlock(block);
   }
 
-  // アイテム削除のイべント
   private removeItemEvent(b: PlacementObjectInterface) {
     const item = b as Item;
     this.engine.itemService.removeItem(item);
   }
 
-  /*
-  フレームごとの処理関連
-  */
-
-  // オブジェクトを設置するための処理
   private objectCreateHandler(
     queue: GameQueue<PlacementObjectInterface>,
     callback: (data: PlacementObjectInterface) => void
   ) {
-    // キューに詰められたオブジェクトを処理する
     while (!queue.isEmpty()) {
       const data = queue.read();
-
-      // 設置タイミングになってない場合は処理を終了する
       if (data === undefined || !data.isCreatedTime()) break;
-
-      // 設置処理を行う
       callback(data);
       queue.dequeue();
     }
   }
 
-  // オブジェクトを削除するための処理
   private objectRemoveHandler(
     queue: GameQueue<PlacementObjectInterface>,
     callback: (data: PlacementObjectInterface) => void
   ) {
-    // キューに詰められたオブジェクトを処理する
     while (!queue.isEmpty()) {
       const data = queue.read();
-
-      // 破壊タイミングになってない場合は処理を終了する
       if (data === undefined || !data.isRemovedTime()) break;
-
-      // 設置処理を行う
       callback(data);
       queue.dequeue();
     }
@@ -324,7 +263,6 @@ export default class GameRoom extends Room<GameRoomState> {
   private timeEventHandler() {
     if (!this.state.gameState.isPlaying()) return;
 
-    // 壁落下イベント
     if (this.state.timer.getRemainTime() <= Constants.INGAME_EVENT_DROP_WALLS_TIME) {
       if (!this.IsFinishedDropWallsEvent) {
         dropWalls(this.engine);
@@ -333,7 +271,6 @@ export default class GameRoom extends Room<GameRoomState> {
     }
   }
 
-  // 敵の移動を行う
   private enemyHandler() {
     if (!this.state.gameState.isPlaying()) return;
     if (!this.state.timer.isOpeningFinished()) return;
