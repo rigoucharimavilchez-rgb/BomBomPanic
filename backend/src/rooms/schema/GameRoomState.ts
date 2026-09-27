@@ -22,8 +22,10 @@ const MAP_PREFIX = /\[\[map:([a-z0-9_-]+)\]\]/i;
 export default class GameRoomState extends Schema {
   @type(GameState)
   gameState: GameState = new GameState();
+
   @type(Timer)
   readonly timer = new Timer();
+
   @type(GameResult)
   gameResult!: GameResult;
 
@@ -40,13 +42,10 @@ export default class GameRoomState extends Schema {
   private readonly itemToDestroyQueue: GameQueue<Item> = new GameQueue<Item>();
   readonly enemies: Enemy[] = [];
 
+  // Keep the Schema construction path identical to the original working room state.
+  // The selected map is assigned by GameRoom immediately after setState().
   @type(Map)
-  gameMap: Map;
-
-  constructor(mapId: string = 'green-garden') {
-    super();
-    this.gameMap = new Map(mapId);
-  }
+  gameMap = new Map();
 
   getPlayer(sessionId: string): Player | undefined { return this.players.get(sessionId); }
   getPlayers(): Player[] { return Array.from(this.players.values()); }
