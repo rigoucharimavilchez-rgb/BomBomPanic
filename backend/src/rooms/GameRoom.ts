@@ -13,6 +13,7 @@ import Enemy from './schema/Enemy';
 import GameRoomState from './schema/GameRoomState';
 import Item from './schema/Item';
 
+const CHARACTER_PREFIX = /^\[\[char:([a-z0-9_-]+)\]\]/i;
 const MAP_PREFIX = /^\[\[map:([a-z0-9_-]+)\]\]/i;
 
 export default class GameRoom extends Room<GameRoomState> {
@@ -25,27 +26,24 @@ export default class GameRoom extends Room<GameRoomState> {
     const { autoDispose, playerName } = options;
     const mapMatch = typeof playerName === 'string' ? playerName.match(MAP_PREFIX) : null;
     const selectedMap = mapMatch?.[1]?.toLowerCase() ?? 'green-garden';
-    this.name = typeof playerName === 'string' ? playerName.replace(MAP_PREFIX, '') : '';
+    this.name = typeof playerName === 'string'
+      ? playerName.replace(CHARACTER_PREFIX, '').replace(MAP_PREFIX, '')
+      : '';
     this.maxClients = Constants.MAX_PLAYER;
     this.autoDispose = autoDispose;
     await this.setMetadata({ name: this.name, locked: false, mapId: selectedMap });
 
-    // ルームで使用する時計
     this.clock.start();
-
     this.setState(new GameRoomState(selectedMap));
     this.engine = new GameEngine(this);
 
-    // ゲーム開始をクライアントから受け取る
     this.onMessage(
       Constants.NOTIFICATION_TYPE.PLAYER_GAME_STATE,
       (client, gameState: Constants.PLAYER_GAME_STATE_TYPE) => {
         switch (gameState) {
           case Constants.PLAYER_GAME_STATE.READY: {
             if (this.state.gameState.isPlaying()) {
-              const data = {
-                serverTimer: this.state.timer,
-              };
+              const data = { serverTimer: this.state.timer };
               client.send(Constants.NOTIFICATION_TYPE.GAME_START_INFO, data);
               return;
             }
@@ -60,9 +58,7 @@ export default class GameRoom extends Room<GameRoomState> {
               (player) => (isLobbyReady = isLobbyReady && player.isReady())
             );
             if (isLobbyReady) {
-              const data = {
-                serverTimer: this.state.timer,
-              };
+              const data = { serverTimer: this.state.timer };
               this.startGame()
                 .then(() => this.broadcast(Constants.NOTIFICATION_TYPE.GAME_START_INFO, data))
                 .catch((err) => console.log(err));
@@ -72,7 +68,6 @@ export default class GameRoom extends Room<GameRoomState> {
       }
     );
 
-    // クライアントからの移動入力を受け取ってキューに詰める
     this.onMessage(Constants.NOTIFICATION_TYPE.PLAYER_MOVE, (client, data: any) => {
       const player = this.state.getPlayer(client.sessionId);
       if (player === undefined) return;
@@ -91,7 +86,6 @@ export default class GameRoom extends Room<GameRoomState> {
     let elapsedTime: number = 0;
     this.setSimulationInterval((deltaTime) => {
       elapsedTime += deltaTime;
-
       this.state.timer.updateNow();
       this.timeEventHandler();
       this.enemyHandler();
@@ -109,20 +103,10 @@ export default class GameRoom extends Room<GameRoomState> {
         }
 
         this.engine.bombService.updateBombCollision();
-
-        this.objectCreateHandler(this.state.getBombToCreateQueue(), (bomb) =>
-          this.createBombEvent(bomb)
-        );
-        this.objectRemoveHandler(this.state.getBombToExplodeQueue(), (bomb) =>
-          this.removeBombEvent(bomb)
-        );
-        this.objectRemoveHandler(this.state.getBlockToDestroyQueue(), (block) =>
-          this.removeBlockEvent(block)
-        );
-        this.objectRemoveHandler(this.state.getItemToDestroyQueue(), (item) =>
-          this.removeItemEvent(item)
-        );
-
+        this.objectCreateHandler(this.state.getBombToCreateQueue(), (bomb) => this.createBombEvent(bomb));
+        this.objectRemoveHandler(this.state.getBombToExplodeQueue(), (bomb) => this.removeBombEvent(bomb));
+        this.objectRemoveHandler(this.state.getBlockToDestroyQueue(), (block) => this.removeBlockEvent(block));
+        this.objectRemoveHandler(this.state.getItemToDestroyQueue(), (item) => this.removeItemEvent(item));
         Matter.Engine.update(this.engine.engine, deltaTime);
       }
     });
@@ -137,9 +121,7 @@ export default class GameRoom extends Room<GameRoomState> {
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_DRAW, (client, data: any) => {
       if (!IS_BACKEND_DEBUG) return;
-      for (const [, player] of this.state.players) {
-        player.damaged(player.hp);
-      }
+      for (const [, player] of this.state.players) player.damaged(player.hp);
     });
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_PLAYER_STATUS_MAX, (client, data: any) => {
@@ -149,9 +131,7 @@ export default class GameRoom extends Room<GameRoomState> {
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_ALL_PLAYER_STATUS_MAX, (client, data: any) => {
       if (!IS_BACKEND_DEBUG) return;
-      for (const [, player] of this.state.players) {
-        player.debugSetPlayerStatusMax();
-      }
+      for (const [, player] of this.state.players) player.debugSetPlayerStatusMax();
     });
 
     this.onMessage(Constants.NOTIFICATION_TYPE.DEBUG_DELETE_ALL_BLOCK, (client, data: any) => {
@@ -185,7 +165,6 @@ export default class GameRoom extends Room<GameRoomState> {
 
   private addEnemy() {
     const enemyCount = Constants.MAX_PLAYER - this.state.getPlayersCount();
-
     for (let i = 0; i < enemyCount; i++) {
       const enemy = this.engine.enemyService.addEnemy(`enemy-${i}`);
       this.enemies.set(`enemy-${i}`, enemy);
@@ -195,15 +174,12 @@ export default class GameRoom extends Room<GameRoomState> {
 
   onJoin(client: Client, options: { playerName: string }) {
     console.log(client.sessionId, 'joined!');
-    const { playerName } = options;
-    this.engine.playerService.addPlayer(client.sessionId, playerName);
+    this.engine.playerService.addPlayer(client.sessionId, options.playerName);
   }
 
   onLeave(client: Client, consented: boolean) {
     const player = this.state.getPlayer(client.sessionId);
-    if (player !== undefined) {
-      this.state.playerIdxsAvail[player.idx] = true;
-    }
+    if (player !== undefined) this.state.playerIdxsAvail[player.idx] = true;
     this.engine.playerService.deletePlayer(client.sessionId);
   }
 
@@ -214,32 +190,23 @@ export default class GameRoom extends Room<GameRoomState> {
   private createBombEvent(b: PlacementObjectInterface) {
     const bomb = b as Bomb;
     const isPlaced = this.engine.playerService.placeBomb(bomb);
-    if (isPlaced) {
-      this.state.getBombToExplodeQueue().enqueue(bomb);
-    } else {
-      this.engine.bombService.deleteBomb(bomb);
-    }
+    if (isPlaced) this.state.getBombToExplodeQueue().enqueue(bomb);
+    else this.engine.bombService.deleteBomb(bomb);
   }
 
   private removeBombEvent(b: PlacementObjectInterface) {
-    const bomb = b as Bomb;
-    this.engine.bombService.explode(bomb);
+    this.engine.bombService.explode(b as Bomb);
   }
 
   private removeBlockEvent(b: PlacementObjectInterface) {
-    const block = b as Block;
-    this.engine.mapService.destroyBlock(block);
+    this.engine.mapService.destroyBlock(b as Block);
   }
 
   private removeItemEvent(b: PlacementObjectInterface) {
-    const item = b as Item;
-    this.engine.itemService.removeItem(item);
+    this.engine.itemService.removeItem(b as Item);
   }
 
-  private objectCreateHandler(
-    queue: GameQueue<PlacementObjectInterface>,
-    callback: (data: PlacementObjectInterface) => void
-  ) {
+  private objectCreateHandler(queue: GameQueue<PlacementObjectInterface>, callback: (data: PlacementObjectInterface) => void) {
     while (!queue.isEmpty()) {
       const data = queue.read();
       if (data === undefined || !data.isCreatedTime()) break;
@@ -248,10 +215,7 @@ export default class GameRoom extends Room<GameRoomState> {
     }
   }
 
-  private objectRemoveHandler(
-    queue: GameQueue<PlacementObjectInterface>,
-    callback: (data: PlacementObjectInterface) => void
-  ) {
+  private objectRemoveHandler(queue: GameQueue<PlacementObjectInterface>, callback: (data: PlacementObjectInterface) => void) {
     while (!queue.isEmpty()) {
       const data = queue.read();
       if (data === undefined || !data.isRemovedTime()) break;
@@ -262,11 +226,8 @@ export default class GameRoom extends Room<GameRoomState> {
 
   private timeEventHandler() {
     if (!this.state.gameState.isPlaying()) return;
-
     if (this.state.timer.getRemainTime() <= Constants.INGAME_EVENT_DROP_WALLS_TIME) {
-      if (!this.IsFinishedDropWallsEvent) {
-        dropWalls(this.engine);
-      }
+      if (!this.IsFinishedDropWallsEvent) dropWalls(this.engine);
       this.IsFinishedDropWallsEvent = true;
     }
   }
