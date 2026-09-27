@@ -34,7 +34,7 @@ export default class Title extends Phaser.Scene {
 
     const playGame = (userName: string) => {
       localStorage.setItem('bbp_username', userName);
-      this.scene.start(Config.SCENE_NAME_LOBBY, {
+      this.scene.start(Config.SCENE_NAME_CHARACTER_SELECT, {
         network: data.network,
         playerName: userName,
         bgm: this.bgm,
@@ -55,10 +55,6 @@ export default class Title extends Phaser.Scene {
     }).on('playGame', function (userName: string) {
       playGame(validateAndFixUserName(userName));
     });
-    // createUsageDialog(this, {
-    //   x: Constants.WIDTH / 2,
-    //   y: Constants.HEIGHT / 2 + 150,
-    // });
 
     createTextBox(this, Constants.WIDTH / 2 - 650 / 2, Constants.HEIGHT / 2 + 80, {
       wrapWidth: 650,
