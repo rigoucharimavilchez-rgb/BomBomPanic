@@ -6,6 +6,7 @@ import ServerPlayer from '../../../backend/src/rooms/schema/Player';
 import * as Config from '../config/config';
 import phaserJuice from '../lib/phaserJuice';
 import Network from '../services/Network';
+import { CHARACTER_WINS_KEY } from '../content/characterRoster';
 import { getWinner } from '../utils/result';
 import { createButton, createButtons } from '../utils/ui';
 import { addBackground } from '../utils/title';
@@ -45,7 +46,6 @@ export default class GameResult extends Phaser.Scene {
     this.network = data.network;
     this.cameras.main.setSize(Constants.WIDTH, Constants.HEIGHT);
 
-    // 舞台幕を開ける
     this.add
       .sprite(0, 0, 'curtain_open')
       .setOrigin(0, 0)
@@ -55,38 +55,24 @@ export default class GameResult extends Phaser.Scene {
 
     addBackground(this);
 
-    // タイトルを表示
     this.add.image(
       Constants.WIDTH * 0.5,
       Constants.HEIGHT * 0.1,
       this.getResultKey(data.gameResult)
     );
 
-    // ボリュームアイコンを表示
     this.add.volumeIcon(this, Constants.WIDTH - 100, 10, isPlay());
 
     const winner = getWinner(data.gameResult);
     const players = this.getPlayers(data.gameResult);
 
-    // テスト用
-    // const players = [
-    //   {
-    //     sessionId: 'test',
-    //     name: 'tanakaaaaaa',
-    //   },
-    //   {
-    //     sessionId: 'test2',
-    //     name: 'tanaka2',
-    //   },
-    //   {
-    //     sessionId: 'test3',
-    //     name: 'tanaka3',
-    //   },
-    // ];
+    // Victoria persistente para el desbloqueo de Rigo.
+    if (winner !== undefined && winner.sessionId === data.sessionId) {
+      const currentWins = Number(localStorage.getItem(CHARACTER_WINS_KEY) ?? '0');
+      localStorage.setItem(CHARACTER_WINS_KEY, String(currentWins + 1));
+    }
 
-    // 勝利者がいる場合
     if (winner !== undefined) {
-      // 花火を表示
       this.addFireWorks();
 
       this.add
@@ -100,14 +86,12 @@ export default class GameResult extends Phaser.Scene {
         )
         .setOrigin(0, 0);
 
-      // トロフィーを表示
       this.add
         .sprite(Constants.WIDTH * 0.25, Constants.HEIGHT * 0.38, Config.ASSET_KEY_TROPHY)
         .play({ key: Config.TROPHY_ANIMATION_KEY }, true);
 
       this.add
         .sprite(Constants.WIDTH * 0.25, Constants.HEIGHT * 0.58, winner.character, 14)
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         .play(`${winner.character}_down`)
         .setScale(2.5);
       this.add
@@ -119,7 +103,6 @@ export default class GameResult extends Phaser.Scene {
         })
         .setOrigin(0.5);
 
-      // y軸でfor文のiを参照すると勝者のiが一つ分飛ぶことになるので間隔ができてしまうので、別で敗者の時にインクリメントする変数を定義
       let index = 0;
       for (let i = 0; i < players.length; i++) {
         if (players[i].hp > 0) continue;
@@ -151,7 +134,7 @@ export default class GameResult extends Phaser.Scene {
         this.se1?.play();
         await this.network.joinLobbyRoom();
         this.bgm.stop();
-        this.scene.get(Config.SCENE_NAME_GAME).scene.stop(); // ゲームシーンを shutdown する
+        this.scene.get(Config.SCENE_NAME_GAME).scene.stop();
         this.scene.stop();
         this.scene.start(Config.SCENE_NAME_LOBBY, {
           network: this.network,
