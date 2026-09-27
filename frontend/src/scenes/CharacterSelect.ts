@@ -28,6 +28,21 @@ export default class CharacterSelect extends Phaser.Scene {
     CHARACTER_ROSTER.forEach((character, index) => this.createCard(character, index));
     this.createBottomBar();
     this.refreshSelection();
+
+    // Use the Scene Input Manager as the authoritative click handler.
+    // This avoids Container / child hit-area ordering issues and works reliably
+    // with the current Phaser input configuration.
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      const px = pointer.x;
+      const py = pointer.y;
+      this.cards.forEach((card, index) => {
+        const bounds = card.getBounds();
+        if (bounds.contains(px, py) && !this.isLocked(CHARACTER_ROSTER[index])) {
+          this.selected = index;
+          this.refreshSelection();
+        }
+      });
+    });
   }
 
   private isLocked(character: CharacterDefinition) { return character.id === 'rigo' ? !isRigoUnlocked() : character.locked === true; }
@@ -47,17 +62,7 @@ export default class CharacterSelect extends Phaser.Scene {
     container.add(this.add.text(0, 34, character.stats, { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '10px', color: locked ? '#7b8794' : '#d67b20' }).setOrigin(0.5));
     container.add(this.add.text(0, 57, character.description, { fontFamily: 'Arial', fontSize: '9px', color: '#5c6b7c', align: 'center', wordWrap: { width: 164 } }).setOrigin(0.5));
     if (locked) container.add(this.add.text(0, 73, character.unlockText ?? 'BLOQUEADO', { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '9px', color: '#ffffff', backgroundColor: '#657180', padding: { left: 7, right: 7, top: 4, bottom: 4 } }).setOrigin(0.5));
-
-    // Interactive hit area is an explicit Phaser GameObject, not the Container itself.
-    const hit = this.add.rectangle(0, 0, cardW, cardH, 0xffffff, 0).setInteractive({ useHandCursor: !locked });
-    container.add(hit);
-    hit.on('pointerdown', () => {
-      if (this.isLocked(character)) return;
-      this.selected = index;
-      this.refreshSelection();
-    });
-    hit.on('pointerover', () => { if (!this.isLocked(character) && this.selected !== index) container.setScale(1.025); });
-    hit.on('pointerout', () => container.setScale(this.selected === index && !this.isLocked(character) ? 1.04 : 1));
+    container.setSize(cardW, cardH);
     this.cards.push(container);
   }
 
@@ -72,7 +77,7 @@ export default class CharacterSelect extends Phaser.Scene {
       const character = CHARACTER_ROSTER[this.selected];
       if (this.isLocked(character)) return;
       localStorage.setItem(SELECTED_CHARACTER_KEY, character.id);
-      this.scene.start(Config.SCENE_NAME_MAP_SELECT, { network: this.network, playerName: `[[char:${character.id}]]${this.playerName}`, bgm: this.bgm });
+      this.scene.start(Config.SCENE_NAME_MAP_SELECT, { network: this.network, playerName: this.playerName, bgm: this.bgm });
     });
   }
 }
