@@ -12,6 +12,7 @@ import { Bomb } from './schema/Bomb';
 import Enemy from './schema/Enemy';
 import GameRoomState from './schema/GameRoomState';
 import Item from './schema/Item';
+import Map from './schema/Map';
 
 const CHARACTER_PREFIX = /^\[\[char:([a-z0-9_-]+)\]\]/i;
 const MAP_PREFIX = /\[\[map:([a-z0-9_-]+)\]\]/i;
@@ -34,7 +35,10 @@ export default class GameRoom extends Room<GameRoomState> {
     await this.setMetadata({ name: this.name, locked: false, mapId: selectedMap });
 
     this.clock.start();
-    this.setState(new GameRoomState(selectedMap));
+    this.setState(new GameRoomState());
+    // Important: initialize the selected map after the stable Schema constructor path.
+    // GameEngine is created only after this assignment, so it always sees the selected map.
+    this.state.gameMap = new Map(selectedMap);
     this.engine = new GameEngine(this);
 
     this.onMessage(
