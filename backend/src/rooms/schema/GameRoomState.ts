@@ -16,6 +16,8 @@ import Map from './Map';
 import Player from './Player';
 import Timer from './Timer';
 
+const CHARACTER_PREFIX = /^\[\[char:([a-z0-9_-]+)\]\]/i;
+
 export default class GameRoomState extends Schema {
   @type(GameState)
   gameState: GameState = new GameState();
@@ -74,11 +76,18 @@ export default class GameRoomState extends Schema {
     }
   }
 
-  createPlayer(sessionId: string, playerName: string, characterId?: string): Player | undefined {
+  createPlayer(sessionId: string, rawPlayerName: string, characterId?: string): Player | undefined {
     const idx = this.getPlayerIdx();
     if (idx === -1) return;
 
-    const player = new Player(sessionId, idx, playerName, characterId);
+    // CharacterSelect prefixes the name so the existing room API can carry the selection
+    // without changing the Colyseus room protocol. The prefix never reaches the visible name.
+    const match = rawPlayerName.match(CHARACTER_PREFIX);
+    const embeddedCharacter = match?.[1]?.toLowerCase();
+    const selectedCharacter = characterId ?? embeddedCharacter;
+    const playerName = rawPlayerName.replace(CHARACTER_PREFIX, '');
+
+    const player = new Player(sessionId, idx, playerName, selectedCharacter);
     player.idx = idx;
     player.x = Constants.INITIAL_PLAYER_POSITION[idx].x;
     player.y = Constants.INITIAL_PLAYER_POSITION[idx].y;
