@@ -47,66 +47,42 @@ export default class Lobby extends Phaser.Scene {
     this.gridTable = undefined;
     this.dialog = undefined;
 
-    this.bgm = this.sound.add('opening', {
-      volume: Config.SOUND_VOLUME,
-    });
-
-    this.se1 = this.sound.add('select', {
-      volume: Config.SOUND_VOLUME,
-    });
-    this.se2 = this.sound.add('select1', {
-      volume: Config.SOUND_VOLUME,
-    });
+    this.bgm = this.sound.add('opening', { volume: Config.SOUND_VOLUME });
+    this.se1 = this.sound.add('select', { volume: Config.SOUND_VOLUME });
+    this.se2 = this.sound.add('select1', { volume: Config.SOUND_VOLUME });
   }
 
   create(data: { network: Network; playerName: string; bgm: Phaser.Sound.BaseSound | undefined }) {
-    if (data.network === undefined) {
-      throw new Error('server instance missing');
-    } else {
-      this.network = data.network;
-    }
+    if (data.network === undefined) throw new Error('server instance missing');
+    this.network = data.network;
 
-    if (data.bgm === undefined) {
-      this.bgm?.play();
-    } else {
-      this.bgm = data.bgm;
-    }
+    if (data.bgm === undefined) this.bgm?.play();
+    else this.bgm = data.bgm;
 
     addBackground(this);
     this.playerName = data.playerName;
     this.add.volumeIcon(this, Constants.WIDTH - 100, 10, isPlay());
 
-    // BomBom Panic visual identity: keep the lobby consistent with the title screen.
     this.add.image(Constants.WIDTH / 2, 62, 'title').setScale(0.82);
     this.add
       .text(Constants.WIDTH / 2, 112, 'MULTIPLAYER LOBBY', {
-        fontFamily: 'PressStart2P',
-        fontSize: '13px',
-        color: '#25324a',
-        stroke: '#ffffff',
-        strokeThickness: 5,
+        fontFamily: 'PressStart2P', fontSize: '13px', color: '#25324a',
+        stroke: '#ffffff', strokeThickness: 5,
       })
       .setOrigin(0.5);
 
     this.availableRooms = this.getAvailableRooms();
     this.network.onRoomsUpdated(this.handleRoomsUpdated, this);
-    this.network.onGameStartInfo(async (data: IGameStartInfo) => {
-      await this.handleGameStart(data);
-    });
+    this.network.onGameStartInfo(async (data: IGameStartInfo) => { await this.handleGameStart(data); });
     this.network.onMyPlayerJoinedRoom((players) => {
       players.forEach((player, sessionId) => {
-        if (sessionId === this.network.mySessionId) {
-          this.addMyPlayerCard(player);
-        } else {
-          this.addOtherPlayerCard(player);
-        }
+        if (sessionId === this.network.mySessionId) this.addMyPlayerCard(player);
+        else this.addOtherPlayerCard(player);
       });
     });
     this.network.onPlayerJoinedRoom(this.addOtherPlayerCard, this);
     this.network.onPlayerLeftRoom(this.removePlayerCard, this);
-    this.network.onPlayerIsReady((player) => {
-      this.handlePlayerIsReady(player);
-    });
+    this.network.onPlayerIsReady((player) => { this.handlePlayerIsReady(player); });
 
     this.buttons = createButtons(this, Constants.WIDTH / 2, Constants.HEIGHT / 5 + 10, [
       createButton(this, 'create room', 0xffd83d),
@@ -115,6 +91,10 @@ export default class Lobby extends Phaser.Scene {
 
     this.gridTable = createGridTable(this, this.availableRooms);
     this.gridTable.on('cell.click', this.handleRoomJoin, this);
+  }
+
+  private getDisplayName() {
+    return this.playerName.replace(/^\[\[char:[a-z0-9_-]+\]\]/i, '');
   }
 
   private getAvailableRooms() {
@@ -144,33 +124,26 @@ export default class Lobby extends Phaser.Scene {
   }
 
   private async handleRoomCreate() {
-    if (this.network.room !== undefined) {
-      await this.network.room.leave();
-    }
+    if (this.network.room !== undefined) await this.network.room.leave();
     if (this.dialog === undefined) {
       this.se1?.play();
       this.disableLobbyButtons();
       await this.network.createAndJoinCustomRoom({
-        name: this.playerName,
+        name: this.getDisplayName(),
         password: null,
         autoDispose: true,
         playerName: this.playerName,
       });
       this.dialog = createDialog(
-        this,
-        Constants.WIDTH / 2,
-        Constants.HEIGHT / 2,
-        () => this.onDialogReady(),
-        () => this.onDialogClose()
+        this, Constants.WIDTH / 2, Constants.HEIGHT / 2,
+        () => this.onDialogReady(), () => this.onDialogClose()
       );
     }
   }
 
   private async handleRoomJoin(cellContainer: any, cellIndex: number) {
     if (cellIndex === -1 || cellIndex >= this.availableRooms.length) return;
-    if (this.network.room !== undefined) {
-      await this.network.room.leave();
-    }
+    if (this.network.room !== undefined) await this.network.room.leave();
     const room = this.availableRooms[cellIndex];
     if (room.id === 'default') return;
     if (this.dialog === undefined) {
@@ -178,11 +151,8 @@ export default class Lobby extends Phaser.Scene {
       this.disableLobbyButtons();
       await this.network.joinCustomRoom(room.id, null, this.playerName);
       this.dialog = createDialog(
-        this,
-        Constants.WIDTH / 2,
-        Constants.HEIGHT / 2,
-        () => this.onDialogReady(),
-        () => this.onDialogClose()
+        this, Constants.WIDTH / 2, Constants.HEIGHT / 2,
+        () => this.onDialogReady(), () => this.onDialogClose()
       );
     }
   }
@@ -192,7 +162,6 @@ export default class Lobby extends Phaser.Scene {
     this.scene.stop(Config.SCENE_NAME_LOBBY);
     this.network.removeAllEventListeners();
     await this.network.lobby?.leave();
-
     const { serverTimer } = data;
     this.scene.start(Config.SCENE_NAME_GAME, { network: this.network, serverTimer });
     this.scene.start(Config.SCENE_NAME_GAME_HEADER, { network: this.network, serverTimer });
@@ -203,16 +172,12 @@ export default class Lobby extends Phaser.Scene {
       this.se2?.play();
       const dialogContent = this.dialog.getElement('content') as GridSizer;
       const playerCard = dialogContent.getChildren().at(player.idx) as Label;
-      playerCard.setText(this.playerName);
+      playerCard.setText(this.getDisplayName());
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
-        if (idx === 2) {
-          child.setFillStyle(Constants.BLUE);
-        }
+        if (idx === 2) child.setFillStyle(Constants.BLUE);
       });
-      setTimeout(() => {
-        flipPlayerCard(this, playerCard, 'back');
-      }, 200);
+      setTimeout(() => { flipPlayerCard(this, playerCard, 'back'); }, 200);
     }
   }
 
@@ -224,31 +189,12 @@ export default class Lobby extends Phaser.Scene {
       playerCard.setText(player.name);
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
-        if (idx === 0) {
-          if (player.gameState === Constants.PLAYER_GAME_STATE.READY) {
-            child.setFillStyle(Constants.GREEN);
-          } else {
-            child.setFillStyle(Constants.LIGHT_RED);
-          }
-        } else if (idx === 1) {
-          if (player.gameState === Constants.PLAYER_GAME_STATE.READY) {
-            child.setText('ready');
-          } else {
-            child.setText('not ready');
-          }
-        } else if (idx === 2) {
-          child.setFillStyle(Constants.RED);
-        } else if (idx === 3) {
-          if (player.gameState === Constants.PLAYER_GAME_STATE.READY) {
-            child.play(`${player.character}_down`, true);
-          } else {
-            child.play(`${player.character}_idle_down`, true);
-          }
-        }
+        if (idx === 0) child.setFillStyle(player.gameState === Constants.PLAYER_GAME_STATE.READY ? Constants.GREEN : Constants.LIGHT_RED);
+        else if (idx === 1) child.setText(player.gameState === Constants.PLAYER_GAME_STATE.READY ? 'ready' : 'not ready');
+        else if (idx === 2) child.setFillStyle(Constants.RED);
+        else if (idx === 3) child.play(`${player.character}_${player.gameState === Constants.PLAYER_GAME_STATE.READY ? 'down' : 'idle_down'}`, true);
       });
-      setTimeout(() => {
-        flipPlayerCard(this, playerCard, 'back');
-      }, 200);
+      setTimeout(() => { flipPlayerCard(this, playerCard, 'back'); }, 200);
     }
   }
 
@@ -258,11 +204,8 @@ export default class Lobby extends Phaser.Scene {
       const playerCard = dialogContent.getChildren().at(player.idx) as Label;
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
-        if (idx === 0) {
-          child.setFillStyle(Constants.LIGHT_RED);
-        } else if (idx === 1) {
-          child.setText('not ready');
-        }
+        if (idx === 0) child.setFillStyle(Constants.LIGHT_RED);
+        else if (idx === 1) child.setText('not ready');
       });
       this.dialog.layout();
       flipPlayerCard(this, playerCard, 'front');
@@ -275,13 +218,9 @@ export default class Lobby extends Phaser.Scene {
       const playerCard = dialogContent.getChildren().at(player.idx) as Label;
       const icon = playerCard.getElement('icon') as ContainerLite;
       icon.getChildren().forEach((child: any, idx) => {
-        if (idx === 0) {
-          child.setFillStyle(Constants.GREEN);
-        } else if (idx === 1) {
-          child.setText('ready');
-        } else if (idx === 3) {
-          child.play(`${player.character}_down`, true);
-        }
+        if (idx === 0) child.setFillStyle(Constants.GREEN);
+        else if (idx === 1) child.setText('ready');
+        else if (idx === 3) child.play(`${player.character}_down`, true);
       });
     }
   }
@@ -293,8 +232,7 @@ export default class Lobby extends Phaser.Scene {
 
   private onDialogClose() {
     this.se1?.play();
-    this.dialog
-      ?.scaleDownDestroyPromise(100)
+    this.dialog?.scaleDownDestroyPromise(100)
       .then(async () => {
         this.dialog = undefined;
         await this.network.leaveRoom();
