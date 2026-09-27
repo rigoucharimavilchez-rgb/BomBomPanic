@@ -32,18 +32,6 @@ export default class MapSelect extends Phaser.Scene {
     MAP_ROSTER.forEach((map, index) => this.createCard(map, index));
     this.createBottomBar();
     this.refreshSelection();
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      const px = pointer.x;
-      const py = pointer.y;
-      this.cards.forEach((card, index) => {
-        const bounds = card.getBounds();
-        if (bounds.contains(px, py)) {
-          this.selected = index;
-          this.refreshSelection();
-        }
-      });
-    });
   }
 
   private drawBackground() {
@@ -58,6 +46,13 @@ export default class MapSelect extends Phaser.Scene {
     const startX = Constants.WIDTH / 2 - (columns * cardW + (columns - 1) * gapX) / 2 + cardW / 2;
     const x = startX + (index % columns) * (cardW + gapX), y = 135 + Math.floor(index / columns) * (cardH + gapY);
     const container = this.add.container(x, y);
+    container.setSize(cardW, cardH);
+    container.setInteractive(
+      new Phaser.Geom.Rectangle(-cardW / 2, -cardH / 2, cardW, cardH),
+      Phaser.Geom.Rectangle.Contains,
+      { useHandCursor: true }
+    );
+
     container.add(this.add.rectangle(4, 6, cardW, cardH, 0x52647a, 0.25).setOrigin(0.5));
     const panel = this.add.rectangle(0, 0, cardW, cardH, 0xfffbef).setOrigin(0.5); panel.setStrokeStyle(4, map.accent, 1); container.add(panel);
     const badge = this.add.circle(0, -35, 32, map.accent); badge.setStrokeStyle(4, 0xffffff, 1); container.add(badge);
@@ -65,11 +60,16 @@ export default class MapSelect extends Phaser.Scene {
     container.add(this.add.text(0, 12, map.name.toUpperCase(), { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '16px', color: '#25324a' }).setOrigin(0.5));
     container.add(this.add.text(0, 40, `${map.difficulty} • ${map.theme}`, { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '12px', color: '#49627d' }).setOrigin(0.5));
     container.add(this.add.text(0, 64, map.description, { fontFamily: 'Arial', fontSize: '10px', color: '#5c6b7c', align: 'center', wordWrap: { width: 160 } }).setOrigin(0.5));
-    container.setSize(cardW, cardH);
+
+    container.on('pointerdown', () => {
+      this.selected = index;
+      localStorage.setItem(SELECTED_MAP_KEY, map.id);
+      this.refreshSelection();
+    });
     this.cards.push(container);
   }
 
-  private refreshSelection() { this.cards.forEach((card, index) => card.setScale(index === this.selected ? 1.04 : 1)); }
+  private refreshSelection() { this.cards.forEach((card, index) => card.setScale(index === this.selected ? 1.06 : 1)); }
 
   private createBottomBar() {
     const y = Constants.HEIGHT - 40;
