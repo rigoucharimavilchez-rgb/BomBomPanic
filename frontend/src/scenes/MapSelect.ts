@@ -10,12 +10,18 @@ export default class MapSelect extends Phaser.Scene {
   private playerName = '';
   private bgm?: Phaser.Sound.BaseSound;
   private selected = 0;
+  private fromLobby = false;
   private cards: Phaser.GameObjects.Container[] = [];
 
   constructor() { super(Config.SCENE_NAME_MAP_SELECT); }
 
-  create(data: { network: Network; playerName: string; bgm?: Phaser.Sound.BaseSound }) {
-    this.network = data.network; this.playerName = data.playerName; this.bgm = data.bgm;
+  create(data: { network: Network; playerName: string; bgm?: Phaser.Sound.BaseSound; fromLobby?: boolean }) {
+    this.network = data.network;
+    this.playerName = data.playerName;
+    this.bgm = data.bgm;
+    this.fromLobby = data.fromLobby === true;
+    this.cards = [];
+
     this.drawBackground();
     this.add.text(Constants.WIDTH / 2, 42, 'CHOOSE YOUR ARENA', { fontFamily: 'PressStart2P', fontSize: '18px', color: '#25324a', stroke: '#ffffff', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(Constants.WIDTH / 2, 76, 'MAPAS', { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '18px', color: '#49627d' }).setOrigin(0.5);
@@ -27,8 +33,6 @@ export default class MapSelect extends Phaser.Scene {
     this.createBottomBar();
     this.refreshSelection();
 
-    // Use the Scene Input Manager so map selection cannot be blocked by
-    // overlapping child Game Objects inside a Container.
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const px = pointer.x;
       const py = pointer.y;
@@ -70,12 +74,13 @@ export default class MapSelect extends Phaser.Scene {
   private createBottomBar() {
     const y = Constants.HEIGHT - 40;
     const back = this.add.text(90, y, '← PERSONAJES', { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '17px', color: '#25324a', backgroundColor: '#ffffff', padding: { left: 16, right: 16, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    back.on('pointerdown', () => this.scene.start(Config.SCENE_NAME_CHARACTER_SELECT, { network: this.network, playerName: this.playerName, bgm: this.bgm }));
+    back.on('pointerdown', () => this.scene.start(Config.SCENE_NAME_CHARACTER_SELECT, { network: this.network, playerName: this.playerName, bgm: this.bgm, fromLobby: this.fromLobby }));
+
     const play = this.add.text(Constants.WIDTH - 90, y, 'IR AL LOBBY →', { fontFamily: 'Arial', fontStyle: 'bold', fontSize: '17px', color: '#ffffff', backgroundColor: '#55b84f', padding: { left: 16, right: 16, top: 10, bottom: 10 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     play.on('pointerdown', () => {
       const map = MAP_ROSTER[this.selected];
       localStorage.setItem(SELECTED_MAP_KEY, map.id);
-      if (localStorage.getItem(SELECTED_CHARACTER_KEY) === null) localStorage.setItem(SELECTED_CHARACTER_KEY, 'bomber');
+      if (localStorage.getItem(SELECTED_CHARACTER_KEY) === null) localStorage.setItem(SELECTED_CHARACTER_KEY, 'axel');
       this.scene.start(Config.SCENE_NAME_LOBBY, { network: this.network, playerName: this.playerName, bgm: this.bgm });
     });
   }
