@@ -9,6 +9,8 @@ import Game from './scenes/Game';
 import GameHeader from './scenes/GameHeader';
 import GameResult from './scenes/GameResult';
 import Lobby from './scenes/Lobby';
+import MapSelect from './scenes/MapSelect';
+import CharacterSelect from './scenes/CharacterSelect';
 import Preloader from './scenes/Preloader';
 import Title from './scenes/Title';
 import isMobile from './utils/mobile';
@@ -30,7 +32,6 @@ const config: Phaser.Types.Core.GameConfig = {
     default: 'matter',
     matter: {
       gravity: { y: 0 },
-      // debug: Config.IS_FRONTEND_DEBUG,
       debug: false,
     },
   },
@@ -39,7 +40,7 @@ const config: Phaser.Types.Core.GameConfig = {
     forceSetTimeOut: true,
   },
   autoFocus: true,
-  scene: [Preloader, Title, Lobby, Game, GameHeader, GameResult],
+  scene: [Preloader, Title, CharacterSelect, MapSelect, Lobby, Game, GameHeader, GameResult],
   plugins: {
     scene: [
       {
